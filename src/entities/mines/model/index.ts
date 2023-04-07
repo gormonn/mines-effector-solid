@@ -1,0 +1,1 @@
+export { model as gameModel } from './model'

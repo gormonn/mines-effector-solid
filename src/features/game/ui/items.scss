@@ -1,0 +1,51 @@
+.item {
+  // .closed {
+    border: outset;
+    border-color: #4bd6c8;
+    &:hover {
+      border-color: #54f0e0;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    &:active {
+      border: solid;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: #277069;
+    }
+  // }
+
+  &.opened {
+    border: solid;
+    border-color: #8a9fb5;
+    background: #a7c0db;
+    display: flex;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+  }
+
+  &>.mine {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    &::after {
+      content: "";
+      border: solid;
+      border-radius: 100%;
+      width: 65%;
+      height: 65%;
+      background: black;
+      border-color: #8a9fb5;
+    }
+
+    &.opened {
+      background: red;
+
+      &::after {
+        border-color: red;
+      }
+    }
+  }
+}

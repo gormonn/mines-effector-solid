@@ -1,0 +1,26 @@
+.container{
+    display: flex;
+    justify-content: center;
+}
+
+.flex{
+    display: flex;
+    flex-direction: column;
+}
+
+// .grid{
+//   display: grid;
+//   grid-template-rows: repeat(${(p) => p.$height}, 24px); // todo: n repeat
+//   grid-template-columns: repeat(${(p) => p.$width}, 24px);
+//   /* gap: 1px; */
+//   /* cursor: none; */
+//   background: radial-gradient(#58fcec, #277069);
+//   pointer-events: ${(p) => (p.$isGameOver ? "none" : "all")};
+// }
+.grid{
+  display: grid;
+//   grid-template-rows: repeat(${(p) => p.$height}, 24px); // todo: n repeat
+//   grid-template-columns: repeat(${(p) => p.$width}, 24px); // todo: n repeat
+  background: radial-gradient(#58fcec, #277069);
+//   pointer-events: ${(p) => (p.$isGameOver ? "none" : "all")};
+}
