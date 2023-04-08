@@ -1,31 +1,39 @@
-import {Accessor, Component, createEffect, createMemo, createSignal, For, Index} from "solid-js";
-import { useUnit } from "effector-solid/scope";
-import {Coord, ItemCoord,GameItem} from "entities/mines/types";
-import { gameModel } from "entities/mines/model";
-import {isMine} from "entities/mines/model/lib";
-import './items.scss'
-import './numbers.scss'
-
-
+import {
+    Accessor,
+    Component,
+    createEffect,
+    createMemo,
+    createSignal,
+    For,
+    Index,
+} from 'solid-js';
+import { useUnit } from 'effector-solid/scope';
+import { Coord, ItemCoord, GameItemEnum } from 'entities/mines/types';
+import { gameModel } from 'entities/mines/model';
+import { isMine } from 'entities/mines/model/lib';
+import './items.scss';
+import './numbers.scss';
 
 export const GameItems = () => {
-    const gameItems = useUnit(gameModel.$gameItems)
+    const gameItems = useUnit(gameModel.$gameItems);
 
     // return <For each={Object.keys(gameItems())} fallback={<div>Loading...</div>}>
-    return <Index each={[...gameItems()]} fallback={<div>Loading...</div>}>
-        {(item, index) => {
-            const [coord, gameItem] = item()
-            // return (
-            //     <div>
-            //         {gameItem}
-            //     </div>
-            // )
-            // return <GameItem coord={coord} gameItem={gameItem}/>
-            return <GameItemCell item={item} mine={isMine(gameItem)}/>
-        }}
-    </Index>
+    return (
+        <Index each={[...gameItems()]} fallback={<div>Loading...</div>}>
+            {(item, index) => {
+                const [coord, gameItem] = item();
+                // return (
+                //     <div>
+                //         {gameItem}
+                //     </div>
+                // )
+                // return <GameItemEnum coord={coord} gameItem={gameItem}/>
+                return <GameItemCell item={item} mine={isMine(gameItem)} />;
+            }}
+        </Index>
+    );
     // return Object.keys(gameItems()).map((coord) => (
-    //     <GameItem
+    //     <GameItemEnum
     //         // key={coord}
     //         coord={coord}
     //         isOpen={openedItems().has(coord)}
@@ -37,7 +45,7 @@ export const GameItems = () => {
     //         // openItem={openItem}
     //     />
     // ))
-}
+};
 
 // type GameItemProps = {
 //     isMine: boolean;
@@ -46,46 +54,48 @@ export const GameItems = () => {
 //   } & ItemCoord; // & WithItemOpener
 
 // type GameItemProps = {
-//     gameItem: GameItem;
+//     gameItem: GameItemEnum;
 //   } & ItemCoord;
 type GameItemProps = {
-    item: Accessor<[Coord, GameItem]>;
+    item: Accessor<[Coord, GameItemEnum]>;
     mine: boolean;
 };
 
 // todo: check isOpen
-// export const GameItem: Component<GameItemProps> = ({ isMine, isOpen, isClickedMine, coord }) => {
-// export const GameItem: Component<GameItemProps> = ({ isClickedMine, coord, gameItem }) => {
+// export const GameItemEnum: Component<GameItemProps> = ({ isMine, isOpen, isClickedMine, coord }) => {
+// export const GameItemEnum: Component<GameItemProps> = ({ isClickedMine, coord, gameItem }) => {
 
 export const GameItemCell: Component<GameItemProps> = ({ item, mine }) => {
-    const [ openItem, openedItems, clickedMine ] = useUnit([
+    const [openItem, openedItems, clickedMine] = useUnit([
         gameModel.openItem,
         gameModel.$openedItems,
-        gameModel.$clickedMine
-    ])
+        gameModel.$clickedMine,
+    ]);
 
     const opened = createMemo(() => {
         const [coord] = item();
-        return openedItems().has(coord)
+        return openedItems().has(coord);
     });
 
     const openedMine = createMemo(() => {
         const [coord] = item();
-        return clickedMine() === coord
+        return clickedMine() === coord;
     });
 
     const [coord, gameItem] = item();
 
-    return <div
-        classList={{ item: true, opened: opened() }}
-        onClick={() => openItem(coord)}
-    >
-        {opened() ? (
-            mine
-                ? (<div classList={{ mine, opened: openedMine() }} />)
-                : (<div class={`num_${gameItem}`}
-                    // onClick={} // todo: open bro-coords
-                />)
-        ) : null}
-    </div>
-} 
+    return (
+        <div
+            classList={{ item: true, opened: opened() }}
+            onClick={() => openItem(coord)}
+        >
+            {/*{opened() ? (*/}
+            {mine ? (
+                <div classList={{ mine, opened: openedMine() }} />
+            ) : (
+                <div class={`num_${gameItem}`} />
+            )}
+            {/*) : null}*/}
+        </div>
+    );
+};

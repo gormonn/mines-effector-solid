@@ -14,27 +14,17 @@ import {
     GameItems,
     CoordsSet,
     Coord,
-    GameItem,
+    GameItemEnum,
     NumberItems,
 } from '../types';
-import {
-    formatCoords,
-    getBroCoords,
-    isEmptyItem,
-    isMine,
-    isNumber,
-} from './lib';
+import { formatCoords, getEmptyBroCoords, getBroCoords, isMine } from './lib';
 import { createLogger } from 'vite';
+import { createGameItems } from 'shared/test-cases';
 
 const emptyCoordSet: CoordsSet = new Set();
 const emptyCoordMap: GameItems = new Map();
 
 const newGame = createGate<GameConfig>();
-// const newGame = createGate<GameConfig>('new-game', {
-//     width: 10,
-//     height: 10,
-//     showAllMines: true
-// });
 
 const openItem = createEvent<Coord>();
 // todo: add flag
@@ -86,108 +76,19 @@ sample({
     target: $clickedMine,
 });
 
-const getBroGroupCoords = (coord: Coord, gameItems: GameItems): Coord[] => {
-    // console.group('getBroGroupCoords')
-    // console.log( 'coord',coord)
-    const broCoords = getBroCoords({ coord });
-    // console.log( 'broCoords', broCoords,)
-
-    const emptyBros = broCoords.filter((coord) => {
-        return gameItems.has(coord) && isEmptyItem(gameItems.get(coord)); // : false;
-    });
-
-    // console.log('emptyBros',emptyBros)
-    // console.groupEnd()
-    return emptyBros;
-    // todo: create связные списки пустых
-    // return getBroCoords({coord}).filter(coord => {
-    //     const broItem = gameItems.get(coord);
-    //     return broItem ? isEmptyItem(broItem) : false;
-    // });
-};
-
-// const getAllBroCoords = (coord: Coord, gameItems: GameItems): Set<Coord> => {
-//     const emptyBros = getBroGroupCoords(coord, gameItems);
-//     // console.group('getAllBroCoords')
-//     // console.log(emptyBros, 'emptyBros')
-//     // console.groupEnd()
-//     if (emptyBros.length) {
-//         let newBros = new Set<Coord>();
-//
-//         for (let i = 0; i <= emptyBros.length; i++) {
-//             const coord = emptyBros[i];
-//             newBros = getAllBroCoords(coord, gameItems);
-//         }
-//
-//         return new Set([...emptyBros, ...newBros]);
-//     } else {
-//         return new Set([...emptyBros]);
-//     }
-//     // return getBroGroupCoords(coord, gameItems).map(coord => getAllBroCoords(coord, gameItems))
-// };
-
-const getAllBroCoords = (coord: Coord, gameItems: GameItems): Set<Coord> => {
-    const emptyBros = getBroGroupCoords(coord, gameItems);
-    // console.group('getAllBroCoords')
-    // console.log(emptyBros, 'emptyBros')
-    // console.groupEnd()
-    if (emptyBros.length) {
-        let newBros = new Set<Coord>();
-
-        for (let i = 0; i <= emptyBros.length; i++) {
-            const coord = emptyBros[i];
-            newBros = getAllBroCoords(coord, gameItems);
-        }
-
-        return new Set([...emptyBros, ...newBros]);
-    } else {
-        return new Set([...emptyBros]);
-    }
-    // return getBroGroupCoords(coord, gameItems).map(coord => getAllBroCoords(coord, gameItems))
-};
-
-// todo: move to lib
-const openEmptyBroCoords = (
-    coord: Coord,
-    gameItems: GameItems,
-    openedItems: CoordsSet,
-): Set<string> => {
-    const emptyBros = getBroGroupCoords(coord, gameItems);
-
-    emptyBros.forEach((coord) => openedItems.add(coord));
-
-    // todo: посмотреть потом, хуета какая-то
-    const broSet = new Set([
-        ...emptyBros.map((coord) =>
-            openEmptyBroCoords(coord, gameItems, openedItems),
-        ),
-    ]);
-
-    // return new Set([...openedItems, ...broSet])
-    return openedItems;
-};
-
 sample({
     clock: openItem,
     source: {
         openedItems: $openedItems,
         gameItems: $gameItems,
+        gameConfig: newGame.state,
     },
     // todo: add filter by empty or number
-    // filter: ,
-    fn: ({ openedItems, gameItems }, coord) => {
-        // todo: add open bro coords
+    filter: ({ openedItems }, coord) => !openedItems.has(coord),
+    fn: ({ openedItems, gameItems, gameConfig }, coord) => {
+        const broSet = getEmptyBroCoords({ coord, gameItems, gameConfig });
 
-        const newSet = new Set(openedItems);
-        newSet.add(coord);
-        // const broSet = openEmptyBroCoords(coord, gameItems, openedItems)
-        const broSet = getAllBroCoords(coord, gameItems);
-
-        // return broSet
-        console.log(broSet, 'broSet');
-
-        return newSet;
-        // return new Set([...broSet, ...newSet])
+        return new Set([...openedItems, ...broSet, coord]);
         // todo: check it:
         //  return new Set([...Array.from(openedItems), coord])
     },
@@ -197,40 +98,49 @@ sample({
 // todo: задать количество мин
 sample({
     clock: newGame.open,
-    fn: ({ width, height }) => {
-        const mines = new Set<string>();
-        const gameItems: GameItems = new Map(emptyCoordMap);
+    fn: (config) => {
+        const { width, height, withoutMines } = config;
 
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                let nx = x / width - 0.5,
-                    ny = y / height - 0.5;
+        const { mines, gameItems } = createGameItems(config);
 
-                // todo: вернуть, это что бы отработать bro coords
-                // const val = noise(50 * nx, 50 * ny) > 0.5 ? GameItem.mine : GameItem.empty;
-                const val = GameItem.empty;
-                const coord = formatCoords(x, y);
-                gameItems.set(coord, val);
-                if (val) mines.add(coord);
-            }
-        }
-
-        gameItems.forEach((gameItem, coord) => {
-            if (!isMine(gameItem)) {
-                const broCoords = getBroCoords({ coord });
-                const minesAroundCount = broCoords.reduce(
-                    (accum, broCoordKey) => {
-                        const broItem = gameItems.get(broCoordKey);
-                        return !!broItem && isMine(broItem)
-                            ? accum + broItem
-                            : accum;
-                    },
-                    0,
-                ) as unknown as NumberItems | GameItem.empty;
-
-                gameItems.set(coord, Math.abs(minesAroundCount));
-            }
-        });
+        // const mines = new Set<string>();
+        // const gameItems: GameItems = new Map(emptyCoordMap);
+        //
+        // for (let y = 0; y < height; y++) {
+        //     for (let x = 0; x < width; x++) {
+        //         const val = withoutMines
+        //             ? GameItemEnum.empty
+        //             : (() => {
+        //                   let nx = x / width - 0.5,
+        //                       ny = y / height - 0.5;
+        //
+        //                   // todo: вернуть, это что бы отработать bro coords
+        //                   return noise(50 * nx, 50 * ny) > 0.5
+        //                       ? GameItemEnum.mine
+        //                       : GameItemEnum.empty;
+        //               })();
+        //         const coord = formatCoords(x, y) as string;
+        //         gameItems.set(coord, val);
+        //         if (val) mines.add(coord);
+        //     }
+        // }
+        //
+        // gameItems.forEach((gameItem, coord) => {
+        //     if (!isMine(gameItem)) {
+        //         const broCoords = getBroCoords({ coord });
+        //         const minesAroundCount = broCoords.reduce(
+        //             (accum, broCoordKey) => {
+        //                 const broItem = gameItems.get(broCoordKey);
+        //                 return !!broItem && isMine(broItem)
+        //                     ? accum + broItem
+        //                     : accum;
+        //             },
+        //             0,
+        //         ) as unknown as NumberItems | GameItemEnum.empty;
+        //
+        //         gameItems.set(coord, Math.abs(minesAroundCount));
+        //     }
+        // });
         // todo: create связные списки (графы) с пустыми значениями
 
         return { gameItems, mines, startTime: new Date().toISOString() };
