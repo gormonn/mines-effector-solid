@@ -1,6 +1,7 @@
 import { reset } from 'patronum';
 import { createEvent, createStore, sample } from 'effector';
 import { gameModel, getEmptyBroCoordsV1 } from 'entities/game';
+import { isEmptyItem, isMine, isNumber } from 'shared/lib';
 import type { Coord, CoordsSet } from 'shared/types';
 
 const emptyCoordSet: CoordsSet = new Set();
@@ -66,12 +67,16 @@ sample({
     clock: openItemV2,
     source: {
         openedItems: $openedItems,
+        gameItems: gameModel.$gameItems,
         indexes: gameModel.$indexes,
     },
     // todo: add filter by empty or number
     filter: ({ openedItems }, coord) => !openedItems.has(coord),
-    fn: ({ openedItems, indexes }, coord) => {
-        const broSet = indexes?.find((set) => set.has(coord)) || new Set([]);
+    fn: ({ gameItems, openedItems, indexes }, coord) => {
+        const item = gameItems.get(coord);
+        const broSet = isEmptyItem(item)
+            ? indexes?.find((set) => set.has(coord)) || []
+            : [];
         return new Set([...openedItems, ...broSet, coord]);
     },
     target: $openedItems,

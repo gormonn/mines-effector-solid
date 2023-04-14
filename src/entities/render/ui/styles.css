@@ -6,5 +6,8 @@
 
 .grid{
     display: grid;
+}
+
+.game-field{
     background: radial-gradient(#58fcec, #277069);
 }

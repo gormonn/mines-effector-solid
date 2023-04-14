@@ -76,5 +76,7 @@ export const createGameItems = (config: GameConfig) => {
         });
     }
 
+    // todo: bug: indexes содержит значения с отрицательными координатами
+
     return { gameItems, mines, indexes };
 };

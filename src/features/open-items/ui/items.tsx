@@ -9,7 +9,7 @@ import './items.scss';
 import './numbers.scss';
 
 export const GameItems = () => {
-    const gameItems = useUnit(gameModel.$gameItems);
+    const [gameItems] = useUnit([gameModel.$gameItems]);
 
     return (
         <Index each={[...gameItems()]} fallback={<div>Loading...</div>}>

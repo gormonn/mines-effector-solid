@@ -23,8 +23,19 @@ import './container.scss';
 //     - не годится для Coop или PvP с одинаковыми полями
 //  - для Coop это должно быть на уровне хоста/сервера
 //  - Ladder? чисто на сервере или на клиенте? что сложнее подделать и перехватить?
-const height = 33;
+const height = 200;
 const width = 33;
+
+// todo: endless mode:
+//  - игра начинается с малого поля
+//  - как только мы "выигрываем", добаляется нераскрытое поле справа
+//  - (между уровнями выбрать скилл? аля rogue-like)
+//  - затем добаляются нераскрытые поля снизу
+//  - это происходит как буд-то раскрывается сложеный листок
+//    - или мы видим, что полей очень много,
+//      однако мы не можем манипулировать "за пределами" нашего поля, пока не закончим его
+//    - после того, как закончили, рабочая область расширяется в 2 раза, либо смещается
+// todo: добавить другие головоломки? или механики
 
 // const config: GameConfig = { ...diagonal };
 // const config: GameConfig = { ...vert };
@@ -34,7 +45,7 @@ const config: GameConfig = {
     ...random(height),
     debugMode: true,
     indexing: true,
-    // render: RenderType.canvas,
+    render: RenderType.canvas,
     storeVersion: StoreVersion.v1,
     perfMeter: true,
     // withoutMines: true,

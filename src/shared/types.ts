@@ -1,6 +1,7 @@
 export type Nullable<T> = T | null;
 
 export enum GameItemEnum {
+    flag = -2,
     mine = -1,
     empty = 0, //todo: не удобно, т.к. это falsy значение
     n1 = 1,

@@ -1430,6 +1430,25 @@
     estree-walker "^2.0.1"
     picomatch "^2.2.2"
 
+"@solid-primitives/map@^0.4.3":
+  version "0.4.3"
+  resolved "https://registry.yarnpkg.com/@solid-primitives/map/-/map-0.4.3.tgz#128037f81402ad8b2a68e0c574123b9e711e167d"
+  integrity sha512-9cpa8MjhLNg+PTVQaIhDUuc192kXoyIAbSCGNTxjzqq7u4OwakhvZlt4C3rIkvLX6yThNlC4IBhOnOSpos5DQA==
+  dependencies:
+    "@solid-primitives/trigger" "^1.0.3"
+
+"@solid-primitives/trigger@^1.0.3":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@solid-primitives/trigger/-/trigger-1.0.5.tgz#c89769c9689fcc98060c3681078b38703bdf5aaa"
+  integrity sha512-NAnLYmUFPvJoH05qBf90IEcSTROM+woFdqcGgGmlcYcewewLNLIuJDB69CvPvM+O9yHvRk7UXcpapV25iXcoDQ==
+  dependencies:
+    "@solid-primitives/utils" "^6.0.0"
+
+"@solid-primitives/utils@^6.0.0":
+  version "6.1.0"
+  resolved "https://registry.yarnpkg.com/@solid-primitives/utils/-/utils-6.1.0.tgz#4814debe3add6092226a0443cdd252747c2070d9"
+  integrity sha512-uTikKFrq33UO+MnKt2WzZr9WYbQe5YX58ytGkL+29DL6o0pZs1wrICbd4ymzSm8azqzMcQqEQOL3HLWjuv9tLw==
+
 "@types/json-schema@^7.0.9":
   version "7.0.11"
   resolved "https://registry.yarnpkg.com/@types/json-schema/-/json-schema-7.0.11.tgz#d421b6c527a3037f7c84433fd2c4229e016863d3"

@@ -1,5 +1,4 @@
 .item {
-  // .closed {
     border: outset;
     border-color: #4bd6c8;
     &:hover {
@@ -11,7 +10,6 @@
       background: rgba(255, 255, 255, 0.1);
       border-color: #277069;
     }
-  // }
 
   &.opened {
     border: solid;

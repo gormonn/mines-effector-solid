@@ -1,7 +1,7 @@
 import type { ParentProps } from 'solid-js';
 import { useUnit } from 'effector-solid/scope';
 import { gameModel } from 'entities/game';
-import './dom-render.css';
+import './styles.css';
 
 export const DomRender = (props: ParentProps) => {
     const [config] = useUnit([gameModel.$gameConfig]);
@@ -9,7 +9,7 @@ export const DomRender = (props: ParentProps) => {
     return (
         <div class="flex">
             <div
-                class="grid"
+                class="grid game-field"
                 style={{
                     'grid-template-rows': `repeat(${
                         config()?.height ?? 1

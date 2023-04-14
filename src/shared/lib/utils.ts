@@ -7,6 +7,7 @@ import {
     Nullable,
 } from 'shared/types';
 
+export const isFlag = (item?: GameItemEnum) => item == GameItemEnum.flag;
 export const isMine = (item?: GameItemEnum) => item == GameItemEnum.mine;
 export const isEmptyItem = (item?: GameItemEnum) => item == GameItemEnum.empty;
 export const isNumber = (item?: GameItemEnum) =>
@@ -26,7 +27,12 @@ export function formatCoords(
 ): Nullable<string> {
     const result = [x, y].join('-');
 
-    if (!gameConfig) return result;
+    if (!gameConfig) {
+        if (x < 0 || y < 0) {
+            return null;
+        }
+        return result;
+    }
 
     if (x < 0 || x > gameConfig.width || y < 0 || y > gameConfig.height) {
         return null;

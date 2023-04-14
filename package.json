@@ -12,6 +12,7 @@
     "lin:fix": "eslint --fix --ext .js,.ts,.tsx src/**"
   },
   "dependencies": {
+    "@solid-primitives/map": "^0.4.3",
     "effector": "^22.7.0",
     "effector-solid": "^0.22.7",
     "patronum": "^1.17.0",
