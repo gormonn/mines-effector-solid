@@ -7,7 +7,9 @@
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "lint": "eslint --ext .js,.ts,.tsx src/**",
+    "lin:fix": "eslint --fix --ext .js,.ts,.tsx src/**"
   },
   "dependencies": {
     "effector": "^22.7.0",
@@ -19,9 +21,32 @@
   },
   "devDependencies": {
     "@linaria/vite": "^4.2.9",
+    "@typescript-eslint/eslint-plugin": "^5.43.0",
+    "@typescript-eslint/parser": "^5.58.0",
+    "eslint": "^8.0.1",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-airbnb-typescript": "^17.0.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-config-standard-with-typescript": "^34.0.1",
+    "eslint-import-resolver-typescript": "^3.5.5",
+    "eslint-plugin-effector": "0.8.1",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-n": "^15.0.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-promise": "^6.0.0",
+    "eslint-plugin-solid": "^0.12.0",
+    "eslint-plugin-unicorn": "^46.0.0",
     "sass": "^1.60.0",
+    "typescript": "*",
     "vite": "^4.0.0",
     "vite-plugin-solid": "^2.5.0",
     "vite-tsconfig-paths": "^4.0.7"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
   }
 }
