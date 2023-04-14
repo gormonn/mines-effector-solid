@@ -60,8 +60,8 @@ export const GameItemCell = (props: GameItemProps) => {
             data-tip={coord}
             classList={{ item: true, opened: opened() }}
             // onClick={() => openItem(coord)}
-            // onClick={() => openItemV2(coord)}
-            onClick={() => model.openItemV2(coord)}
+            onClick={() => openItemV2(coord)}
+            // onClick={() => model.openItemV2(coord)}
         >
             {opened() ? children : debugMode() ? children : null}
         </div>

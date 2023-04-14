@@ -71,8 +71,7 @@ sample({
     // todo: add filter by empty or number
     filter: ({ openedItems }, coord) => !openedItems.has(coord),
     fn: ({ openedItems, indexes }, coord) => {
-        const broSet =
-            indexes?.find((set) => set.has(coord)) != null || new Set([]);
+        const broSet = indexes?.find((set) => set.has(coord)) || new Set([]);
         return new Set([...openedItems, ...broSet, coord]);
     },
     target: $openedItems,

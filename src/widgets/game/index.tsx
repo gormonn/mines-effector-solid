@@ -34,7 +34,7 @@ const config: GameConfig = {
     ...random(height),
     debugMode: true,
     indexing: true,
-    render: RenderType.canvas,
+    // render: RenderType.canvas,
     storeVersion: StoreVersion.v1,
     perfMeter: true,
     // withoutMines: true,
