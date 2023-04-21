@@ -42,7 +42,7 @@ const createFilterFn =
 export const getEmptyBroCoordsV1 = ({
     coord,
     gameItems,
-    gameConfig,
+    config,
 }: GetBroCoordsNewProps) => {
     const item = gameItems.get(coord);
     if (isNumber(item) || isMine(item)) return [];
@@ -60,7 +60,7 @@ export const getEmptyBroCoordsV1 = ({
             if (!isNumber(gameItems.get(coord))) {
                 nextBros = getBroCoords({
                     coord,
-                    gameConfig,
+                    config,
                     filterFn,
                 });
 

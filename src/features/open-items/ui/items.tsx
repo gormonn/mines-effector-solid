@@ -8,6 +8,7 @@ import { model } from '../model';
 import './items.scss';
 import './numbers.scss';
 
+// todo: move to widgets
 export const GameItems = () => {
     const [gameItems] = useUnit([gameModel.$gameItems]);
 

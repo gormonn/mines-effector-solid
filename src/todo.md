@@ -1,0 +1,3 @@
+- почитать https://www.solidjs.com/docs/latest/api#createdeferred
+- использовать createdeferred для таймера?
+- 

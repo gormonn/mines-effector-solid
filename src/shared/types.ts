@@ -54,6 +54,14 @@ export type GameConfig = {
     indexing?: boolean;
     render?: RenderType;
     storeVersion?: StoreVersion;
+
+    shiftX?: number;
+    shiftY?: number;
+
+    forcedEmptyBros?: Coord[];
+    forcedMinesBros?: Coord[];
+    forcedOpen?: Coord;
+    infinityMode?: boolean;
 };
 export type SerializableGameConfig = Partial<
     Omit<GameConfig, 'minesPreset'>
@@ -66,3 +74,5 @@ export type CoordsSet = Set<Coord>;
 export type ItemOpener = (coord: Coord) => void;
 export type WithItemOpener = { openItem: ItemOpener };
 export type Indexes = Array<CoordsSet>;
+
+export type Shift = { x: number; y: number };

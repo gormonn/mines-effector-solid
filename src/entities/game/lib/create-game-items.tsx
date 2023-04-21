@@ -1,3 +1,4 @@
+import { getForcedBros } from 'entities/game/lib/forced-bros';
 import {
     checkCoordInIndex,
     formatCoords,
@@ -17,15 +18,38 @@ import { getEmptyBroCoordsV1 } from './get-empty-bro-coords-v1';
 const emptyCoordMap: GameItems = new Map();
 
 export const createGameItems = (config: GameConfig) => {
-    const { width, height, withoutMines, minesFn, minesPreset, indexing } =
-        config;
+    const {
+        width,
+        height,
+        withoutMines,
+        minesFn,
+        minesPreset,
+        indexing,
+        forcedEmptyBros,
+        forcedMinesBros,
+        forcedOpen,
+    } = config;
     const mines = new Set<string>(minesPreset || []);
     const gameItems: GameItems = new Map(emptyCoordMap);
+
+    const forcedMines = getForcedBros(config, forcedMinesBros);
+    const forcedEmpty = getForcedBros(config, forcedEmptyBros);
 
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             const val = (() => {
                 if (withoutMines) return GameItemEnum.empty;
+                if (forcedMinesBros) {
+                    const coord = formatCoords(x, y);
+                    const isForcedMine = forcedMines.includes(coord);
+                    if (isForcedMine) return GameItemEnum.mine;
+                }
+
+                if (forcedEmptyBros) {
+                    const coord = formatCoords(x, y);
+                    const isForcedEmpty = forcedEmpty.includes(coord);
+                    if (isForcedEmpty) return GameItemEnum.empty;
+                }
 
                 if (minesFn)
                     return minesFn(x, y)
@@ -39,6 +63,7 @@ export const createGameItems = (config: GameConfig) => {
 
                 return GameItemEnum.empty;
             })();
+
             const coord = formatCoords(x, y);
             gameItems.set(coord, val);
 
@@ -68,7 +93,7 @@ export const createGameItems = (config: GameConfig) => {
                     const emptyBroCoords = getEmptyBroCoordsV1({
                         coord,
                         gameItems,
-                        gameConfig: config,
+                        config,
                     });
                     indexes.push(new Set(emptyBroCoords));
                 }

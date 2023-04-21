@@ -1,2 +1,2 @@
 export * from './ui/items';
-export { model as openItemsModel } from './model';
+export { model as openItemsModel } from './model/model';

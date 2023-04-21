@@ -1,5 +1,11 @@
 import { reset, spread } from 'patronum';
-import { createStore, sample } from 'effector';
+import {
+    combine,
+    createEffect,
+    createEvent,
+    createStore,
+    sample,
+} from 'effector';
 import { createGate } from 'effector-solid';
 import {
     CoordsSet,
@@ -9,7 +15,7 @@ import {
     Indexes,
     Nullable,
 } from 'shared/types';
-import { createGameItems } from './lib/create-game-items';
+import { createGameItems } from '../lib/create-game-items';
 
 const emptyCoordSet: CoordsSet = new Set();
 const emptyCoordMap: GameItems = new Map();
@@ -17,7 +23,29 @@ const emptyCoordMapV2: GameItemsV2 = new Map();
 
 const newGame = createGate<GameConfig>();
 
-const $gameConfig = createStore<Nullable<GameConfig>>(null);
+type Direction = -1 | 1;
+const setShiftX = createEvent<Direction>();
+const setShiftY = createEvent<Direction>();
+const $shiftX = createStore<number>(0);
+const $shiftY = createStore<number>(0);
+
+const $shift = combine({ x: $shiftX, y: $shiftY }, (p) => p);
+
+sample({
+    clock: setShiftX,
+    source: $shiftX,
+    fn: (x, dir) => x + dir,
+    target: $shiftX,
+});
+
+sample({
+    clock: setShiftY,
+    source: $shiftY,
+    fn: (y, dir) => y + dir,
+    target: $shiftY,
+});
+
+const $config = createStore<Nullable<GameConfig>>(null);
 const $mineItems = createStore<CoordsSet>(emptyCoordSet);
 const $indexes = createStore<Nullable<Indexes>>(null);
 const $gameItems = createStore<GameItems>(emptyCoordMap);
@@ -30,9 +58,56 @@ const $debugMode = createStore(false);
 const $startTime = createStore<string>('');
 const $endTime = createStore<string>('');
 
-// todo: задать количество мин
+const genNewGame = createEvent<Nullable<Partial<GameConfig>>>();
+
 sample({
     clock: newGame.open,
+    target: $config,
+});
+
+// необходимо для того, что-бы параметры не мигрировали с каждой "новой игрой"
+// только не понятно нахуя
+const usedOnce: Set<keyof GameConfig> = new Set([
+    'infinityMode',
+    'forcedEmptyBros',
+    'forcedOpen',
+]);
+// todo: move to lib
+const filterConfig = (config: GameConfig): Partial<GameConfig> =>
+    Object.fromEntries(
+        Object.entries(config).filter(
+            ([key]) => !usedOnce.has(key as keyof GameConfig),
+        ),
+    );
+
+// sample({
+//     clock: genNewGame,
+//     source: $config,
+//     filter: Boolean,
+//     fn: (config, newConfig) => {
+//         const filteredConfig = filterConfig(config);
+//         return (
+//             newConfig
+//                 ? { ...filteredConfig, ...newConfig }
+//                 : { ...filteredConfig }
+//         ) as GameConfig;
+//     },
+//     target: $config,
+// });
+// так как не понятно нахуя, сохранил предыдущий вариант, чтобы проверить потом
+sample({
+    clock: genNewGame,
+    source: $config,
+    filter: Boolean,
+    fn: (config, newConfig) =>
+        newConfig ? { ...config, ...newConfig } : { ...config },
+    target: $config,
+});
+
+// todo: задать количество мин
+sample({
+    source: $config,
+    filter: Boolean,
     fn: (config) => {
         const { debugMode, perfMeter } = config;
 
@@ -46,11 +121,10 @@ sample({
         if (perfMeter) console.timeEnd(perfLabel);
 
         return {
+            startTime: new Date().toISOString(),
             gameItems,
             mines,
-            startTime: new Date().toISOString(),
             debugMode,
-            config,
             indexes,
         };
     },
@@ -60,7 +134,6 @@ sample({
             gameItems: $gameItems,
             startTime: $startTime,
             debugMode: $debugMode,
-            config: $gameConfig,
             indexes: $indexes,
         },
     }),
@@ -68,9 +141,14 @@ sample({
 
 reset({
     clock: newGame.close,
-    // clock: gameModel.newGame.status,
     target: [$mineItems, $gameItems, $startTime],
 });
+
+// const logFx = createEffect((val) => {
+//     console.log(val, 'val');
+// });
+//
+// sample({ source: $startTime, target: logFx });
 
 export const model = {
     newGame,
@@ -79,9 +157,20 @@ export const model = {
     $startTime,
     $endTime,
     $debugMode,
-    $gameConfig,
+    $config,
     $gameItemsV2,
     $indexes,
+    emptyCoordSet,
+    emptyCoordMap,
+    emptyCoordMapV2,
+
+    $shiftX,
+    $shiftY,
+    $shift,
+    setShiftX,
+    setShiftY,
+
+    genNewGame,
 };
 
 // todo: add different shapes:

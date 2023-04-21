@@ -4,7 +4,7 @@ import { gameModel } from 'entities/game';
 import './styles.css';
 
 export const DomRender = (props: ParentProps) => {
-    const [config] = useUnit([gameModel.$gameConfig]);
+    const [config] = useUnit([gameModel.$config]);
 
     return (
         <div class="flex">

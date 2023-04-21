@@ -22,12 +22,12 @@ enum PointEnum {
 export type GetBroCoordsNewProps = ItemCoord & {
     gameItems: GameItems;
     currentPoint?: PointEnum;
-    gameConfig: GameConfig;
+    config: GameConfig;
 };
 export type GetBroCoordsProps<T = string> = {
     coord: T;
     gameItems?: GameItems;
-    gameConfig?: GameConfig;
+    config?: GameConfig;
     filterFn?: (coord: Nullable<T>, itemType?: GameItemEnum) => boolean;
     diagonal?: boolean;
 };

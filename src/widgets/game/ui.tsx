@@ -1,4 +1,4 @@
-import { Match, Switch } from 'solid-js';
+import { createEffect, Match, onCleanup, onMount, Switch } from 'solid-js';
 import { useGate, useUnit } from 'effector-solid/scope';
 import { savePresetModel } from 'features/devtools/save-preset';
 import { GameItems } from 'features/open-items';
@@ -23,31 +23,24 @@ import './container.scss';
 //     - не годится для Coop или PvP с одинаковыми полями
 //  - для Coop это должно быть на уровне хоста/сервера
 //  - Ladder? чисто на сервере или на клиенте? что сложнее подделать и перехватить?
-const height = 200;
+const height = 33;
 const width = 33;
-
-// todo: endless mode:
-//  - игра начинается с малого поля
-//  - как только мы "выигрываем", добаляется нераскрытое поле справа
-//  - (между уровнями выбрать скилл? аля rogue-like)
-//  - затем добаляются нераскрытые поля снизу
-//  - это происходит как буд-то раскрывается сложеный листок
-//    - или мы видим, что полей очень много,
-//      однако мы не можем манипулировать "за пределами" нашего поля, пока не закончим его
-//    - после того, как закончили, рабочая область расширяется в 2 раза, либо смещается
-// todo: добавить другие головоломки? или механики
 
 // const config: GameConfig = { ...diagonal };
 // const config: GameConfig = { ...vert };
 // const config: GameConfig = { ...horiz };
 // const config: GameConfig = { ...vertHoriz };
-const config: GameConfig = {
+const gameConfig: GameConfig = {
     ...random(height),
     debugMode: true,
     indexing: true,
     render: RenderType.canvas,
     storeVersion: StoreVersion.v1,
-    perfMeter: true,
+    infinityMode: true,
+    // perfMeter: true,
+    // forcedMinesBros: ['2-2', '2-5'],
+    // forcedEmptyBros: ['2-2', '2-5'],
+    // forcedOpen: '2-2',
     // withoutMines: true,
 };
 // const config: GameConfig = { ...diagonal2 }; // todo: не правильно открывается
@@ -55,13 +48,50 @@ const config: GameConfig = {
 export const Game = () => {
     // useGate(gameModel.newGame, { width, height, withoutMines: true });
     // useGate(gameModel.newGame, { width, height, withoutMines: false });
-    useGate(gameModel.newGame, config);
-    // useGate(model.newGame, testConfig02);
+    // useGate(gameModel.newGame, config);
+    useGate(gameModel.newGame, gameConfig);
 
-    const [saveGamePreset, gameConfig] = useUnit([
-        savePresetModel.saveGamePreset,
-        gameModel.$gameConfig,
-    ]);
+    const [saveGamePreset, config, startTime, shift, setShiftX, setShiftY] =
+        useUnit([
+            savePresetModel.saveGamePreset,
+            gameModel.$config,
+            gameModel.$startTime,
+            gameModel.$shift,
+            gameModel.setShiftX,
+            gameModel.setShiftY,
+        ]);
+
+    // createEffect(() => {
+    //     console.log(startTime(), 'startTime()');
+    // });
+
+    // createEffect(() => {
+    //     console.log(shift(), 'shift');
+    // });
+
+    const keyPressHandler = (e: KeyboardEvent) => {
+        switch (e.key) {
+            case 'ArrowUp':
+                setShiftY(-1);
+                break;
+            case 'ArrowDown':
+                setShiftY(1);
+                break;
+            case 'ArrowLeft':
+                setShiftX(-1);
+                break;
+            case 'ArrowRight':
+                setShiftX(1);
+                break;
+        }
+    };
+
+    onMount(() => {
+        document.body.addEventListener('keydown', keyPressHandler);
+        onCleanup(() => {
+            document.body.removeEventListener('keydown', keyPressHandler);
+        });
+    });
 
     return (
         <>
@@ -70,17 +100,14 @@ export const Game = () => {
             </button>
             <div class="container">
                 <Switch fallback={<>Loading...</>}>
-                    <Match
-                        keyed
-                        when={gameConfig()?.render === RenderType.canvas}
-                    >
+                    <Match keyed when={config()?.render === RenderType.canvas}>
                         <CanvasRender />
                     </Match>
                     <Match
                         keyed
                         when={
-                            gameConfig()?.render === RenderType.dom ||
-                            gameConfig()?.render === undefined
+                            config()?.render === RenderType.dom ||
+                            config()?.render === undefined
                         }
                     >
                         <DomRender>

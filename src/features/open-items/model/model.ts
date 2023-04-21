@@ -1,5 +1,5 @@
-import { reset } from 'patronum';
-import { createEvent, createStore, sample } from 'effector';
+import { reset, spread } from 'patronum';
+import { combine, createEvent, createStore, merge, sample } from 'effector';
 import { gameModel, getEmptyBroCoordsV1 } from 'entities/game';
 import { isEmptyItem, isMine, isNumber } from 'shared/lib';
 import type { Coord, CoordsSet } from 'shared/types';
@@ -15,22 +15,63 @@ const openItemV2 = createEvent<Coord>();
 const $openedItems = createStore<CoordsSet>(emptyCoordSet);
 
 const $clickedMine = createStore<string>('');
-const $isGameOver = createStore<boolean>(false);
-
+const $isGameOver = createStore(false);
+const $isTouched = createStore(false);
 // todo: is win
 
-reset({
-    clock: gameModel.newGame.close,
-    // clock: gameModel.newGame.status,
-    target: [$openedItems, $isGameOver, $clickedMine],
+sample({
+    source: {
+        clickedMine: $clickedMine,
+        config: gameModel.$config,
+    },
+    filter: ({ config, clickedMine }) =>
+        Boolean(config?.infinityMode && clickedMine.length > 0),
+    fn: ({ clickedMine }) => {
+        return {
+            forcedEmptyBros: [clickedMine],
+            forcedOpen: clickedMine,
+        };
+    },
+    target: gameModel.genNewGame,
 });
 
 sample({
-    source: $clickedMine,
-    fn: (clickedMine) => Boolean(clickedMine),
-    // fn: (clickedMine) => !!clickedMine,
-    // fn: Boolean,
+    source: {
+        clickedMine: $clickedMine,
+        config: gameModel.$config,
+    },
+    filter: ({ config, clickedMine }) =>
+        Boolean(config?.infinityMode === false && clickedMine.length > 0),
+    fn: () => true,
     target: $isGameOver,
+});
+
+reset({
+    clock: [gameModel.newGame.close, gameModel.$config],
+    target: [$openedItems, $isGameOver, $clickedMine],
+});
+// forcedOpen
+sample({
+    source: {
+        config: gameModel.$config,
+        indexes: gameModel.$indexes,
+        gameItems: gameModel.$gameItems,
+    },
+    filter: ({ indexes, config }) =>
+        Boolean(indexes) && Boolean(config?.forcedOpen),
+    fn: ({ config, gameItems, indexes }) => {
+        if (config?.forcedOpen) {
+            const coord = config.forcedOpen;
+            // todo#212312: move to lib
+            const item = gameItems.get(coord);
+            const broSet = isEmptyItem(item)
+                ? indexes?.find((set) => set.has(coord)) || []
+                : [];
+            return new Set([...broSet, coord]);
+        }
+        return emptyCoordSet;
+    },
+    target: $openedItems,
 });
 
 sample({
@@ -52,12 +93,12 @@ sample({
     source: {
         openedItems: $openedItems,
         gameItems: gameModel.$gameItems,
-        gameConfig: gameModel.newGame.state,
+        config: gameModel.newGame.state,
     },
     // todo: add filter by empty or number
     filter: ({ openedItems }, coord) => !openedItems.has(coord),
-    fn: ({ openedItems, gameItems, gameConfig }, coord) => {
-        const broSet = getEmptyBroCoordsV1({ coord, gameItems, gameConfig });
+    fn: ({ openedItems, gameItems, config }, coord) => {
+        const broSet = getEmptyBroCoordsV1({ coord, gameItems, config });
         return new Set([...openedItems, ...broSet, coord]);
     },
     target: $openedItems,
@@ -73,6 +114,7 @@ sample({
     // todo: add filter by empty or number
     filter: ({ openedItems }, coord) => !openedItems.has(coord),
     fn: ({ gameItems, openedItems, indexes }, coord) => {
+        // todo#212312: move to lib
         const item = gameItems.get(coord);
         const broSet = isEmptyItem(item)
             ? indexes?.find((set) => set.has(coord)) || []
@@ -82,10 +124,17 @@ sample({
     target: $openedItems,
 });
 
+sample({
+    clock: [openItem, openItemV2],
+    fn: () => true,
+    target: $isTouched,
+});
+
 export const model = {
     openItem,
     openItemV2,
     $openedItems,
     $clickedMine,
     $isGameOver,
+    $isTouched,
 };

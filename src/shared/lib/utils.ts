@@ -5,6 +5,7 @@ import {
     Indexes,
     MinesCoord,
     Nullable,
+    Shift,
 } from 'shared/types';
 
 export const isFlag = (item?: GameItemEnum) => item == GameItemEnum.flag;
@@ -13,28 +14,29 @@ export const isEmptyItem = (item?: GameItemEnum) => item == GameItemEnum.empty;
 export const isNumber = (item?: GameItemEnum) =>
     !isEmptyItem(item) && !isMine(item);
 
+const defaultOffset: Shift = { x: 0, y: 0 };
 // function overload (перегрузка функции)
 export function formatCoords(x: number, y: number): string;
 export function formatCoords(
     x: number,
     y: number,
-    gameConfig?: GameConfig,
+    config?: GameConfig,
 ): Nullable<string>;
 export function formatCoords(
     x: number,
     y: number,
-    gameConfig?: GameConfig,
+    config?: GameConfig,
 ): Nullable<string> {
     const result = [x, y].join('-');
 
-    if (!gameConfig) {
+    if (!config) {
         if (x < 0 || y < 0) {
             return null;
         }
         return result;
     }
 
-    if (x < 0 || x > gameConfig.width || y < 0 || y > gameConfig.height) {
+    if (x < 0 || x > config.width || y < 0 || y > config.height) {
         return null;
     }
 
@@ -42,7 +44,15 @@ export function formatCoords(
 }
 
 export const parseCoords = (key: string): MinesCoord =>
-    key.split('-').map((e) => Number(e)) as MinesCoord;
+    key.split('-').map((e, i) => Number(e)) as MinesCoord;
+
+// export const parseCoords = (key: string, offset = defaultOffset): MinesCoord =>
+//     key.split('-').map((e, i) => {
+//         if (i === 0) {
+//             return Number(e) + offset.x;
+//         }
+//         return Number(e) + offset.y;
+//     }) as MinesCoord;
 
 export const checkCoordInIndex = (coord: Coord, indexes: Indexes) =>
     (indexes as Indexes).some((index) => index.has(coord));

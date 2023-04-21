@@ -1,4 +1,4 @@
-import { noise } from 'shared/noise';
+import { createNoise2D } from 'simplex-noise';
 import { GameConfig } from 'shared/types';
 
 export const random = (size = 10): GameConfig => ({
@@ -6,6 +6,7 @@ export const random = (size = 10): GameConfig => ({
     height: size,
     withoutMines: false,
     minesFn: (x, y) => {
+        const noise = createNoise2D();
         const nx = x / size - 0.5,
             ny = y / size - 0.5;
         return noise(50 * nx, 50 * ny) > 0.5;

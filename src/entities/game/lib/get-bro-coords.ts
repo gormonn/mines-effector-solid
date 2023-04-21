@@ -14,22 +14,22 @@ x , y|x, y|x, y
 */
 export const getBroCoords = ({
     coord,
-    gameConfig,
+    config,
     filterFn,
     diagonal = true,
 }: GetBroCoordsProps): string[] => {
     const [x, y] = parseCoords(coord);
 
-    const lt = diagonal ? formatCoords(x - 1, y - 1, gameConfig) : null;
-    const lm = formatCoords(x - 1, y, gameConfig);
-    const lb = diagonal ? formatCoords(x - 1, y + 1, gameConfig) : null;
+    const lt = diagonal ? formatCoords(x - 1, y - 1, config) : null;
+    const lm = formatCoords(x - 1, y, config);
+    const lb = diagonal ? formatCoords(x - 1, y + 1, config) : null;
 
-    const t = formatCoords(x, y - 1, gameConfig);
-    const b = formatCoords(x, y + 1, gameConfig);
+    const t = formatCoords(x, y - 1, config);
+    const b = formatCoords(x, y + 1, config);
 
-    const tr = diagonal ? formatCoords(x + 1, y - 1, gameConfig) : null;
-    const mr = formatCoords(x + 1, y, gameConfig);
-    const br = diagonal ? formatCoords(x + 1, y + 1, gameConfig) : null;
+    const tr = diagonal ? formatCoords(x + 1, y - 1, config) : null;
+    const mr = formatCoords(x + 1, y, config);
+    const br = diagonal ? formatCoords(x + 1, y + 1, config) : null;
 
     const result = [lt, lm, lb, t, b, tr, mr, br];
 

@@ -4,15 +4,16 @@ import {
     createSignal,
     indexArray,
     mapArray,
+    on,
     onCleanup,
     onMount,
+    untrack,
 } from 'solid-js';
 import { useUnit } from 'effector-solid/scope';
 import { openItemsModel } from 'features/open-items';
 import { gameModel } from 'entities/game';
 import { isEmptyItem, isMine, isNumber, parseCoords } from 'shared/lib';
 import './styles.css';
-import { createLogger } from 'vite';
 import { GameItemEnum } from 'shared/types';
 
 // todo: create theming
@@ -123,47 +124,78 @@ const resetFill = (
     setFill(ctx, shape, style);
 };
 
+type ShapesMapItem = {
+    shape: Path2D;
+    isOpen?: boolean;
+    itemType?: GameItemEnum | undefined;
+};
+
+type CreateShapeProps = {
+    ctx: CanvasRenderingContext2D;
+    x: number;
+    y: number;
+    shapesMap: ReactiveMap<string, ShapesMapItem>;
+    itemType?: GameItemEnum;
+    isOpen?: boolean;
+    isDebugMode?: boolean;
+};
+
 // todo: wtf, нахера мне дублировать состояние???
-const createShape = (
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    shapesMap: ReactiveMap<
-        string,
-        { shape: Path2D; isOpen: boolean; type?: GameItemEnum }
-    >,
-    type?: GameItemEnum,
+const createShape = ({
+    ctx,
+    x,
+    y,
+    shapesMap,
+    itemType,
     isOpen = false,
-) => {
+    isDebugMode = false,
+}: CreateShapeProps) => {
     const shape = new Path2D();
     shape.rect(x * size, y * size, size, size);
-    setFill(ctx, shape, isOpen ? styles.item.opened : styles.item.hoverOff);
+    const fill = (() => {
+        if (isDebugMode) {
+            return styles.item.hoverOff;
+        } else if (isOpen) {
+            return styles.item.opened;
+        } else {
+            return styles.item.hoverOff;
+        }
+    })();
 
-    if (type) {
-        if (isMine(type)) {
+    setFill(ctx, shape, fill);
+
+    if (itemType) {
+        if (isMine(itemType)) {
             shapes.mine(ctx, x, y);
-        } else if (isNumber(type)) {
-            shapes.number(ctx, x, y, type);
+        } else if (isNumber(itemType)) {
+            shapes.number(ctx, x, y, itemType);
         }
     }
 
-    shapesMap.set(shapeKey(x, y), { shape, isOpen, type });
+    // shapesMap.set(shapeKey(x, y), { shape, isOpen, itemType });
+    shapesMap.set(shapeKey(x, y), { shape, isOpen: true, itemType });
 };
 
+// todo: move to widgets
 export const CanvasRender = () => {
     let canvas: HTMLCanvasElement;
-    const shapesMap = new ReactiveMap<
-        string,
-        { shape: Path2D; isOpen: boolean; type?: GameItemEnum }
-    >();
+    const shapesMap = new ReactiveMap<string, ShapesMapItem>();
 
-    const [config, gameItems, openItemV2, openedItems, clickedMine] = useUnit([
-        gameModel.$gameConfig,
-        gameModel.$gameItems,
-        openItemsModel.openItemV2,
-        openItemsModel.$openedItems,
-        openItemsModel.$clickedMine,
-    ]);
+    const [config, gameItems, debugMode, openItemV2, openedItems, clickedMine] =
+        useUnit([
+            gameModel.$config,
+            gameModel.$gameItems,
+            gameModel.$debugMode,
+            openItemsModel.openItemV2,
+            openItemsModel.$openedItems,
+            openItemsModel.$clickedMine,
+        ]);
+
+    const width = (config()?.width || 1) * size;
+    const height = (config()?.height || 1) * size;
+    // createEffect(() => {
+    //     console.log(gameItems(), 'gameItems');
+    // });
 
     // createEffect(() => {
     //     console.log(openedItems(), 'openedItems');
@@ -185,32 +217,9 @@ export const CanvasRender = () => {
     };
 
     onMount(() => {
-        const ctx = canvas.getContext('2d');
-
-        if (ctx) {
-            const items = gameItems();
-
-            // rects:
-            items.forEach((gameItem, coord) => {
-                // todo: use gameItemV2 without parsing
-                const [x, y] = parseCoords(coord);
-                createShape(ctx, x, y, shapesMap);
-            });
-
-            // triangles:
-            // items.forEach((gameItem, coord) => {
-            //     const [x, y] = parseCoords(coord);
-            //     const offsetY = x % 2 ? size / 2 : 0;
-            //     const offsetX = y % 2 ? size / 2 : 0;
-            //     ctx.rect(x * size + offsetX, y * size + offsetY, size, size);
-            //     // ctx.rect(x * size, y * size + offsetY, size, size);
-            //     ctx.stroke();
-            // });
-        }
-
         function mouseMove(e) {
             // todo: add throttle?
-            const rect = this.getBoundingClientRect();
+            const rect = this.getBoundingClientRect(); // wth this?
             const step = 1;
             const nextX = e.clientX - rect.left;
             const nextY = e.clientY - rect.top;
@@ -220,94 +229,71 @@ export const CanvasRender = () => {
 
         canvas.addEventListener('mousemove', mouseMove);
 
-        const loop: FrameRequestCallback = (t) => {
-            // console.time('loop draw');
-            frame = requestAnimationFrame(loop);
+        // const loop: FrameRequestCallback = (t) => {
+        //     // console.time('loop draw');
+        //     frame = requestAnimationFrame(loop);
+        //
+        //     // const ctx = canvas.getContext('2d');
+        //     // if (ctx) {
+        //     //     const opened = openedItems();
+        //     //     const items = gameItems();
+        //     //
+        //     //     console.log(items, 'items');
+        //     //     // rects:
+        //     //     opened.forEach((gameItem, coord) => {
+        //     //         // todo: use gameItemV2 without parsing
+        //     //         const [x, y] = parseCoords(coord);
+        //     //         const itemType = items.get(coord);
+        //     //         createShape({
+        //     //             ctx,
+        //     //             x,
+        //     //             y,
+        //     //             shapesMap,
+        //     //             itemType,
+        //     //             isOpen: true,
+        //     //         });
+        //     //     });
+        //     //
+        //     //     // triangles:
+        //     //     // items.forEach((gameItem, coord) => {
+        //     //     //     const [x, y] = parseCoords(coord);
+        //     //     //     const offsetY = x % 2 ? size / 2 : 0;
+        //     //     //     const offsetX = y % 2 ? size / 2 : 0;
+        //     //     //     ctx.rect(x * size + offsetX, y * size + offsetY, size, size);
+        //     //     //     // ctx.rect(x * size, y * size + offsetY, size, size);
+        //     //     //     ctx.stroke();
+        //     //     // });
+        //     // }
+        // };
 
-            // const items = gameItems();
-            // console.log(gameItems, 'gameItems');
-            // mapArray(gameItems, (item, index) => {
-            //     console.log(item, index, 'item,i');
-            // });
-
-            // indexArray(gameItems, (item, index) => {
-            //     console.log(item, index, 'item,i');
-            //     // const [coord, gameItem] = item();
-            //     // const [x, y] = parseCoords(coord);
-            //     // ctx.rect(x * size, y * size, size, size);
-            // });
-
-            // rects:
-            // items.forEach((gameItem, coord) => {
-            //     // todo: use gameItemV2 without parsing
-            //     const [x, y] = parseCoords(coord);
-            //     ctx.rect(x * size, y * size, size, size);
-            //
-            //     // ctx.fillStyle = ctx.isPointInPath(x, y) ? 'red' : 'blue';
-            //     // ctx.fill();
-            //
-            //     ctx.stroke();
-            // });
-
-            // console.timeEnd('loop draw');
-        };
-
-        let frame = requestAnimationFrame(loop);
+        // let frame = requestAnimationFrame(loop);
 
         onCleanup(() => {
-            cancelAnimationFrame(frame);
+            // cancelAnimationFrame(frame);
             canvas.removeEventListener('mousemove', mouseMove);
         });
     });
 
+    // перерисовка при смене поля
     createEffect(() => {
         const ctx = canvas.getContext('2d');
-        const { x, y, px, py } = getCursorPoint();
-        const prevKey = prevShapeKey();
-        const nextKey = shapeKey(x, y);
-        const { shape, isOpen } = shapesMap.get(nextKey);
-
         if (ctx) {
-            // todo: багнуто
-            // if (!isOpen && shape) {
-            //     // todo: проверить что это не рисуется много раз
-            //     const isPointInPath = ctx.isPointInPath(shape, px, py);
-            //
-            //     resetFill(
-            //         x,
-            //         y,
-            //         ctx,
-            //         shape,
-            //         isPointInPath ? styles.item.hoverOn : styles.item.hoverOff,
-            //     );
-            // }
-            //
-            // if (prevKey && prevKey !== nextKey) {
-            //     const { shape } = shapesMap.get(prevKey);
-            //     const [x, y] = parseCoords(prevKey);
-            //     resetFill(x, y, ctx, shape, styles.item.hoverOff);
-            // }
-            //
-            // if (!isOpen && prevKey !== nextKey) {
-            //     setPrevShapeKey(nextKey);
-            // }
-        }
-    });
-
-    createEffect(() => {
-        console.time('call draw effect');
-        const ctx = canvas.getContext('2d');
-
-        if (ctx) {
-            const opened = openedItems();
+            ctx.clearRect(0, 0, width, height);
             const items = gameItems();
 
             // rects:
-            opened.forEach((gameItem, coord) => {
+            items.forEach((gameItem, coord) => {
                 // todo: use gameItemV2 without parsing
                 const [x, y] = parseCoords(coord);
                 const itemType = items.get(coord);
-                createShape(ctx, x, y, shapesMap, itemType, true);
+                createShape({
+                    ctx,
+                    x,
+                    y,
+                    shapesMap,
+                    itemType,
+                    isDebugMode: debugMode(),
+                });
             });
 
             // triangles:
@@ -320,8 +306,86 @@ export const CanvasRender = () => {
             //     ctx.stroke();
             // });
         }
+    });
 
-        console.timeEnd('call draw effect');
+    // todo: а что это?
+    // createEffect(() => {
+    //     const ctx = canvas.getContext('2d');
+    //     const { x, y, px, py } = getCursorPoint();
+    //     const prevKey = prevShapeKey();
+    //     const nextKey = shapeKey(x, y);
+    //     // const { shape, isOpen } = shapesMap.get(nextKey) || {};
+    //
+    //     if (ctx) {
+    //         // todo: багнуто
+    //         // if (!isOpen && shape) {
+    //         //     // todo: проверить что это не рисуется много раз
+    //         //     const isPointInPath = ctx.isPointInPath(shape, px, py);
+    //         //
+    //         //     resetFill(
+    //         //         x,
+    //         //         y,
+    //         //         ctx,
+    //         //         shape,
+    //         //         isPointInPath ? styles.item.hoverOn : styles.item.hoverOff,
+    //         //     );
+    //         // }
+    //         //
+    //         // if (prevKey && prevKey !== nextKey) {
+    //         //     const { shape } = shapesMap.get(prevKey);
+    //         //     const [x, y] = parseCoords(prevKey);
+    //         //     resetFill(x, y, ctx, shape, styles.item.hoverOff);
+    //         // }
+    //         //
+    //         // if (!isOpen && prevKey !== nextKey) {
+    //         //     setPrevShapeKey(nextKey);
+    //         // }
+    //     }
+    // });
+
+    // todo: здесь есть странное поведение
+    //  если убрать untrack - то рендер не происходит
+    // перерисовка при открытии полей
+    createEffect(() => {
+        untrack(() => {
+            const { perfMeter } = config() || {};
+            if (perfMeter) console.time('call draw effect');
+        });
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            const opened = openedItems();
+            const items = gameItems();
+
+            // rects:
+            opened.forEach((gameItem, coord) => {
+                // todo: use gameItemV2 without parsing
+                const [x, y] = parseCoords(coord);
+                const itemType = items.get(coord);
+                createShape({
+                    ctx,
+                    x,
+                    y,
+                    shapesMap,
+                    itemType,
+                    isOpen: true,
+                });
+            });
+
+            // triangles:
+            // items.forEach((gameItem, coord) => {
+            //     const [x, y] = parseCoords(coord);
+            //     const offsetY = x % 2 ? size / 2 : 0;
+            //     const offsetX = y % 2 ? size / 2 : 0;
+            //     ctx.rect(x * size + offsetX, y * size + offsetY, size, size);
+            //     // ctx.rect(x * size, y * size + offsetY, size, size);
+            //     ctx.stroke();
+            // });
+        }
+        untrack(() => {
+            const { perfMeter } = config() || {};
+            if (perfMeter) console.timeEnd('call draw effect');
+        });
     });
 
     // todo: clicked mine
@@ -329,12 +393,14 @@ export const CanvasRender = () => {
         const ctx = canvas.getContext('2d');
         const clickedMineKey = clickedMine();
         if (ctx && clickedMineKey) {
-            const { shape } = shapesMap.get(clickedMineKey);
-            const [x, y] = parseCoords(clickedMineKey);
+            const { shape } = shapesMap.get(clickedMineKey) || {};
+            if (shape) {
+                const [x, y] = parseCoords(clickedMineKey);
 
-            resetFill(x, y, ctx, shape, styles.mine.touched);
+                resetFill(x, y, ctx, shape, styles.mine.touched);
 
-            shapes.mine(ctx, x, y);
+                shapes.mine(ctx, x, y);
+            }
         }
     });
 
@@ -348,7 +414,7 @@ export const CanvasRender = () => {
         if (ctx) {
             const { x, y } = getCursorPoint();
             const nextKey = shapeKey(x, y);
-            const { shape, isOpen } = shapesMap.get(nextKey);
+            const { shape, isOpen } = shapesMap.get(nextKey) || {};
             if (!isOpen && shape) {
                 resetFill(x, y, ctx, shape, styles.item.active);
             }
@@ -359,8 +425,8 @@ export const CanvasRender = () => {
         <canvas
             ref={canvas}
             class="game-field"
-            width={config()?.width * size}
-            height={config()?.height * size}
+            width={width}
+            height={height}
             // onKeyUp={keyUpHandler}
             onMouseUp={mouseUpHandler}
             onMouseDown={mouseDownHandler}

@@ -19,7 +19,7 @@ const saveGamePresetFx = createEffect(({ mines, config }: Props) => {
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
-    a.download = 'gameConfig.json';
+    a.download = 'config.json';
     document.body.append(a);
     a.click();
     URL.revokeObjectURL(url);
@@ -29,7 +29,7 @@ sample({
     clock: saveGamePreset,
     source: {
         mines: gameModel.$mineItems,
-        config: gameModel.$gameConfig,
+        config: gameModel.$config,
     },
     target: saveGamePresetFx,
 });
