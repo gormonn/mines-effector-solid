@@ -14,7 +14,7 @@ import { openItemsModel } from 'features/open-items';
 import { gameModel } from 'entities/game';
 import { isEmptyItem, isMine, isNumber, parseCoords } from 'shared/lib';
 import './styles.css';
-import { GameItemEnum } from 'shared/types';
+import { GameItemEnum, MouseControls } from 'shared/types';
 
 // todo: create theming
 const styles = {
@@ -89,9 +89,23 @@ const number = (
     ctx.fillText(type as string, px + rad, py + fontSize / 4);
 };
 
+const flag = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+    const rad = size / 2;
+    const px = x * size;
+    const py = y * size;
+
+    ctx.beginPath();
+    ctx.arc(px + rad, py + rad, rad / 2, 0, 2 * Math.PI);
+    ctx.strokeStyle = styles.mine.borderColor;
+    ctx.stroke();
+    ctx.fillStyle = 'green';
+    ctx.fill();
+};
+
 const shapes = {
     mine,
     number,
+    flag,
 };
 
 const setFill = (
@@ -137,6 +151,7 @@ type CreateShapeProps = {
     shapesMap: ReactiveMap<string, ShapesMapItem>;
     itemType?: GameItemEnum;
     isOpen?: boolean;
+    isFlagged?: boolean;
     isDebugMode?: boolean;
 };
 
@@ -148,6 +163,7 @@ const createShape = ({
     shapesMap,
     itemType,
     isOpen = false,
+    isFlagged = false,
     isDebugMode = false,
 }: CreateShapeProps) => {
     const shape = new Path2D();
@@ -164,7 +180,9 @@ const createShape = ({
 
     setFill(ctx, shape, fill);
 
-    if (itemType) {
+    if (isFlagged) {
+        shapes.flag(ctx, x, y);
+    } else if (itemType) {
         if (isMine(itemType)) {
             shapes.mine(ctx, x, y);
         } else if (isNumber(itemType)) {
@@ -181,15 +199,23 @@ export const CanvasRender = () => {
     let canvas: HTMLCanvasElement;
     const shapesMap = new ReactiveMap<string, ShapesMapItem>();
 
-    const [config, gameItems, debugMode, openItemV2, openedItems, clickedMine] =
-        useUnit([
-            gameModel.$config,
-            gameModel.$gameItems,
-            gameModel.$debugMode,
-            openItemsModel.openItemV2,
-            openItemsModel.$openedItems,
-            openItemsModel.$clickedMine,
-        ]);
+    const [
+        config,
+        gameItems,
+        debugMode,
+        clickItem,
+        openedItems,
+        flaggedItems,
+        clickedMine,
+    ] = useUnit([
+        gameModel.$config,
+        gameModel.$gameItems,
+        gameModel.$debugMode,
+        openItemsModel.clickItem,
+        openItemsModel.$openedItems,
+        openItemsModel.$flaggedItems,
+        openItemsModel.$clickedMine,
+    ]);
 
     const width = (config()?.width || 1) * size;
     const height = (config()?.height || 1) * size;
@@ -388,6 +414,49 @@ export const CanvasRender = () => {
         });
     });
 
+    // перерисовка при проставлении флажков
+    createEffect(() => {
+        untrack(() => {
+            const { perfMeter } = config() || {};
+            if (perfMeter) console.time('call draw effect');
+        });
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            const flagged = flaggedItems();
+            const items = gameItems();
+
+            // rects:
+            flagged.forEach((gameItem, coord) => {
+                // todo: use gameItemV2 without parsing
+                const [x, y] = parseCoords(coord);
+                const itemType = items.get(coord);
+                createShape({
+                    ctx,
+                    x,
+                    y,
+                    shapesMap,
+                    itemType,
+                    isFlagged: true,
+                });
+            });
+
+            // triangles:
+            // items.forEach((gameItem, coord) => {
+            //     const [x, y] = parseCoords(coord);
+            //     const offsetY = x % 2 ? size / 2 : 0;
+            //     const offsetX = y % 2 ? size / 2 : 0;
+            //     ctx.rect(x * size + offsetX, y * size + offsetY, size, size);
+            //     // ctx.rect(x * size, y * size + offsetY, size, size);
+            //     ctx.stroke();
+            // });
+        }
+        untrack(() => {
+            const { perfMeter } = config() || {};
+            if (perfMeter) console.timeEnd('call draw effect');
+        });
+    });
+
     // todo: clicked mine
     createEffect(() => {
         const ctx = canvas.getContext('2d');
@@ -404,14 +473,16 @@ export const CanvasRender = () => {
         }
     });
 
-    const mouseUpHandler = () => {
-        const { x, y } = getCursorPoint();
-        openItemV2(shapeKey(x, y));
+    const mouseUpHandler = (e: MouseEvent) => {
+        if (e.button === MouseControls.Left) {
+            const { x, y } = getCursorPoint();
+            clickItem(shapeKey(x, y));
+        }
     };
 
-    const mouseDownHandler = () => {
+    const mouseDownHandler = (e: MouseEvent) => {
         const ctx = canvas.getContext('2d');
-        if (ctx) {
+        if (ctx && e.button === MouseControls.Left) {
             const { x, y } = getCursorPoint();
             const nextKey = shapeKey(x, y);
             const { shape, isOpen } = shapesMap.get(nextKey) || {};

@@ -76,3 +76,12 @@ export type WithItemOpener = { openItem: ItemOpener };
 export type Indexes = Array<CoordsSet>;
 
 export type Shift = { x: number; y: number };
+
+// todo: разные настройки управления
+//  под комп мышь с 2 кнопками
+//  под мобилу др
+export enum MouseControls {
+    Left,
+    Mid,
+    Right,
+}

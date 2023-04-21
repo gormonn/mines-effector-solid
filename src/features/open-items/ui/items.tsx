@@ -28,15 +28,13 @@ type GameItemProps = {
 };
 
 export const GameItemCell = (props: GameItemProps) => {
-    const [openItem, openItemV2, openedItems, clickedMine, debugMode] = useUnit(
-        [
-            model.openItem,
-            model.openItemV2,
-            model.$openedItems,
-            model.$clickedMine,
-            gameModel.$debugMode,
-        ],
-    );
+    const [openItem, clickItem, openedItems, clickedMine, debugMode] = useUnit([
+        model.openItem,
+        model.clickItem,
+        model.$openedItems,
+        model.$clickedMine,
+        gameModel.$debugMode,
+    ]);
 
     const opened = createMemo(() => {
         const [coord] = props.item();
@@ -61,8 +59,8 @@ export const GameItemCell = (props: GameItemProps) => {
             data-tip={coord}
             classList={{ item: true, opened: opened() }}
             // onClick={() => openItem(coord)}
-            onClick={() => openItemV2(coord)}
-            // onClick={() => model.openItemV2(coord)}
+            onClick={() => clickItem(coord)}
+            // onClick={() => model.clickItem(coord)}
         >
             {opened() ? children : debugMode() ? children : null}
         </div>

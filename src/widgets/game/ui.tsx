@@ -93,12 +93,16 @@ export const Game = () => {
         });
     });
 
+    const contextMenuDisable = (e: MouseEvent) => {
+        e.preventDefault();
+    };
+
     return (
         <>
             <button onClick={() => saveGamePreset()}>
                 Сохранить пресет игры
             </button>
-            <div class="container">
+            <div class="container" onContextMenu={contextMenuDisable}>
                 <Switch fallback={<>Loading...</>}>
                     <Match keyed when={config()?.render === RenderType.canvas}>
                         <CanvasRender />
