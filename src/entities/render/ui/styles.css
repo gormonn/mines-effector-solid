@@ -11,3 +11,8 @@
 .game-field{
     background: radial-gradient(#58fcec, #277069);
 }
+.game-overlay{
+    background: transparent;
+    position: absolute;
+    pointer-events: none;
+}

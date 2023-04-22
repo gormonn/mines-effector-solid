@@ -49,6 +49,7 @@ const $config = createStore<Nullable<GameConfig>>(null);
 const $mineItems = createStore<CoordsSet>(emptyCoordSet);
 const $indexes = createStore<Nullable<Indexes>>(null);
 const $gameItems = createStore<GameItems>(emptyCoordMap);
+const $numbersCount = createStore<number>(0);
 
 // todo#: маппинг без форматирования и парсинга ключей
 // todo: замерить "до и после"
@@ -115,7 +116,8 @@ sample({
 
         if (perfMeter) console.time(perfLabel);
 
-        const { mines, gameItems, indexes } = createGameItems(config);
+        const { mines, gameItems, indexes, numbersCount } =
+            createGameItems(config);
         // todo: create связные списки (графы) с пустыми значениями
 
         if (perfMeter) console.timeEnd(perfLabel);
@@ -126,6 +128,7 @@ sample({
             mines,
             debugMode,
             indexes,
+            numbersCount,
         };
     },
     target: spread({
@@ -135,13 +138,15 @@ sample({
             startTime: $startTime,
             debugMode: $debugMode,
             indexes: $indexes,
+            numbersCount: $numbersCount,
         },
     }),
 });
 
+// todo: remove?
 reset({
     clock: newGame.close,
-    target: [$mineItems, $gameItems, $startTime],
+    target: [$mineItems, $gameItems, $startTime, $numbersCount, $indexes],
 });
 
 // const logFx = createEffect((val) => {
@@ -154,6 +159,7 @@ export const model = {
     newGame,
     $mineItems,
     $gameItems,
+    $numbersCount,
     $startTime,
     $endTime,
     $debugMode,

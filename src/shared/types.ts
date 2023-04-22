@@ -49,6 +49,7 @@ export type GameConfig = {
     minesPreset?: CoordsSet;
     minesFn?: (x: number, y: number) => boolean;
     debugMode?: boolean;
+    overlayMode?: boolean;
     perfMeter?: boolean;
 
     indexing?: boolean;

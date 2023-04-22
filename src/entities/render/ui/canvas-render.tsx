@@ -1,20 +1,12 @@
 import { ReactiveMap } from '@solid-primitives/map';
-import {
-    createEffect,
-    createSignal,
-    indexArray,
-    mapArray,
-    on,
-    onCleanup,
-    onMount,
-    untrack,
-} from 'solid-js';
+import { createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { useUnit } from 'effector-solid/scope';
 import { openItemsModel } from 'features/open-items';
 import { gameModel } from 'entities/game';
-import { isEmptyItem, isMine, isNumber, parseCoords } from 'shared/lib';
+import { getBroCoords } from 'entities/game/lib/get-bro-coords'; // todo: импорт на одном уровне
+import { formatCoords, isMine, isNumber, parseCoords } from 'shared/lib';
+import { GameItemEnum, MouseControls } from 'shared/types';
 import './styles.css';
-import { GameItemEnum, MouseControls, NumberItems } from 'shared/types';
 
 // todo: create theming
 const styles = {
@@ -75,7 +67,7 @@ const number = (
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
-    type: GameItemEnum,
+    type: Omit<GameItemEnum, 'flag' | 'mine' | 'empty'>,
 ) => {
     const rad = size / 2;
     const px = x * size;
@@ -164,6 +156,7 @@ const createShape = ({
 }: CreateShapeProps) => {
     const shape = new Path2D();
     shape.rect(x * size, y * size, size, size);
+
     const fill = (() => {
         if (debugMode) {
             return styles.item.hoverOff;
@@ -176,18 +169,30 @@ const createShape = ({
 
     setFill(ctx, shape, fill);
 
-    if (isFlagged) {
-        shapes.flag(ctx, x, y);
-    } else if (itemType) {
-        if (isMine(itemType)) {
-            shapes.mine(ctx, x, y);
-        } else if (isNumber(itemType)) {
-            shapes.number(ctx, x, y, itemType);
+    if (debugMode) {
+        if (isFlagged) {
+            shapes.flag(ctx, x, y);
+        } else if (itemType) {
+            if (isMine(itemType)) {
+                shapes.mine(ctx, x, y);
+            } else if (isNumber(itemType)) {
+                shapes.number(ctx, x, y, itemType);
+            }
+        }
+    } else {
+        if (isFlagged) {
+            shapes.flag(ctx, x, y);
+        } else if (itemType && isOpen) {
+            if (isMine(itemType)) {
+                shapes.mine(ctx, x, y);
+            } else if (isNumber(itemType)) {
+                shapes.number(ctx, x, y, itemType);
+            }
         }
     }
 
-    // shapesMap.set(shapeKey(x, y), { shape, isOpen, itemType });
-    shapesMap.set(shapeKey(x, y), { shape, isOpen: true, itemType });
+    shapesMap.set(shapeKey(x, y), { shape, isOpen, itemType });
+    // shapesMap.set(shapeKey(x, y), { shape, isOpen: true, itemType });
 };
 
 type CreateHintProps = {
@@ -225,12 +230,12 @@ const createHint = ({ ctx, x, y, itemType }: CreateHintProps) => {
 // todo: move to widgets
 export const CanvasRender = () => {
     let canvas: HTMLCanvasElement;
+    let canvasOverlay: HTMLCanvasElement;
     const shapesMap = new ReactiveMap<string, ShapesMapItem>();
 
     const [
         config,
         gameItems,
-        // debugMode,
         clickItem,
         openedItems,
         flaggedItems,
@@ -239,7 +244,6 @@ export const CanvasRender = () => {
     ] = useUnit([
         gameModel.$config,
         gameModel.$gameItems,
-        // gameModel.$debugMode,
         openItemsModel.clickItem,
         openItemsModel.$openedItems,
         openItemsModel.$flaggedItems,
@@ -249,11 +253,10 @@ export const CanvasRender = () => {
 
     const width = (config()?.width || 1) * size;
     const height = (config()?.height || 1) * size;
-    const { debugMode, perfMeter } = config() || {};
+    const { debugMode, perfMeter, overlayMode } = config() || {};
 
     const [pointerX, setPointerX] = createSignal(0);
     const [pointerY, setPointerY] = createSignal(0);
-    const [prevShapeKey, setPrevShapeKey] = createSignal<string>('');
 
     const getCursorPoint = () => {
         const px = pointerX();
@@ -267,9 +270,10 @@ export const CanvasRender = () => {
     };
 
     onMount(() => {
-        function mouseMove(e) {
+        function mouseMove(e: MouseEvent) {
             // todo: add throttle?
-            const rect = this.getBoundingClientRect(); // wth this?
+            // const rect = this.getBoundingClientRect(); // todo: wth this?
+            const rect = canvas.getBoundingClientRect();
             const step = 1;
             const nextX = e.clientX - rect.left;
             const nextY = e.clientY - rect.top;
@@ -279,41 +283,15 @@ export const CanvasRender = () => {
 
         canvas.addEventListener('mousemove', mouseMove);
 
-        // const loop: FrameRequestCallback = (t) => {
-        //     // console.time('loop draw');
+        // const ctxOverlay = canvasOverlay?.getContext('2d');
+        // const loop: FrameRequestCallback = () => {
         //     frame = requestAnimationFrame(loop);
-        //
-        //     // const ctx = canvas.getContext('2d');
-        //     // if (ctx) {
-        //     //     const opened = openedItems();
-        //     //     const items = gameItems();
-        //     //
-        //     //     console.log(items, 'items');
-        //     //     // rects:
-        //     //     opened.forEach((gameItem, coord) => {
-        //     //         // todo: use gameItemV2 without parsing
-        //     //         const [x, y] = parseCoords(coord);
-        //     //         const itemType = items.get(coord);
-        //     //         createShape({
-        //     //             ctx,
-        //     //             x,
-        //     //             y,
-        //     //             shapesMap,
-        //     //             itemType,
-        //     //             isOpen: true,
-        //     //         });
-        //     //     });
-        //     //
-        //     //     // triangles:
-        //     //     // items.forEach((gameItem, coord) => {
-        //     //     //     const [x, y] = parseCoords(coord);
-        //     //     //     const offsetY = x % 2 ? size / 2 : 0;
-        //     //     //     const offsetX = y % 2 ? size / 2 : 0;
-        //     //     //     ctx.rect(x * size + offsetX, y * size + offsetY, size, size);
-        //     //     //     // ctx.rect(x * size, y * size + offsetY, size, size);
-        //     //     //     ctx.stroke();
-        //     //     // });
-        //     // }
+        //     if (ctxOverlay) {
+        //         const { px, py } = getCursorPoint();
+        //         ctxOverlay.clearRect(0, 0, width, height);
+        //         ctxOverlay.rect(px, py, 50, 25);
+        //         ctxOverlay.stroke();
+        //     }
         // };
 
         // let frame = requestAnimationFrame(loop);
@@ -326,6 +304,8 @@ export const CanvasRender = () => {
 
     // перерисовка при смене поля
     createEffect(() => {
+        if (perfMeter) console.time('draw-reset-game');
+
         const ctx = canvas.getContext('2d');
         if (ctx) {
             ctx.clearRect(0, 0, width, height);
@@ -356,6 +336,7 @@ export const CanvasRender = () => {
             //     ctx.stroke();
             // });
         }
+        if (perfMeter) console.timeEnd('draw-reset-game');
     });
 
     // todo: а что это?
@@ -393,14 +374,9 @@ export const CanvasRender = () => {
     //     }
     // });
 
-    // todo: здесь есть странное поведение
-    //  если убрать untrack - то рендер не происходит
     // перерисовка при открытии полей
     createEffect(() => {
-        // untrack(() => {
-        // const { perfMeter } = config() || {};
         if (perfMeter) console.time('draw-opened-items');
-        // });
 
         const ctx = canvas.getContext('2d');
         if (ctx) {
@@ -421,29 +397,13 @@ export const CanvasRender = () => {
                     isOpen: true,
                 });
             });
-
-            // triangles:
-            // items.forEach((gameItem, coord) => {
-            //     const [x, y] = parseCoords(coord);
-            //     const offsetY = x % 2 ? size / 2 : 0;
-            //     const offsetX = y % 2 ? size / 2 : 0;
-            //     ctx.rect(x * size + offsetX, y * size + offsetY, size, size);
-            //     // ctx.rect(x * size, y * size + offsetY, size, size);
-            //     ctx.stroke();
-            // });
         }
-        // untrack(() => {
-        //     const { perfMeter } = config() || {};
         if (perfMeter) console.timeEnd('draw-opened-items');
-        // });
     });
 
     // перерисовка при проставлении флажков
     createEffect(() => {
-        // untrack(() => {
-        //     const { perfMeter } = config() || {};
         if (perfMeter) console.time('draw-flags');
-        // });
 
         const ctx = canvas.getContext('2d');
         if (ctx) {
@@ -464,29 +424,13 @@ export const CanvasRender = () => {
                     isFlagged: true,
                 });
             });
-
-            // triangles:
-            // items.forEach((gameItem, coord) => {
-            //     const [x, y] = parseCoords(coord);
-            //     const offsetY = x % 2 ? size / 2 : 0;
-            //     const offsetX = y % 2 ? size / 2 : 0;
-            //     ctx.rect(x * size + offsetX, y * size + offsetY, size, size);
-            //     // ctx.rect(x * size, y * size + offsetY, size, size);
-            //     ctx.stroke();
-            // });
         }
-        // untrack(() => {
-        //     const { perfMeter } = config() || {};
         if (perfMeter) console.timeEnd('draw-flags');
-        // });
     });
 
     // перерисовка при получении подсказок
     createEffect(() => {
-        // untrack(() => {
-        //     const { perfMeter } = config() || {};
         if (perfMeter) console.time('draw-hints');
-        // });
 
         const ctx = canvas.getContext('2d');
         if (ctx) {
@@ -504,21 +448,8 @@ export const CanvasRender = () => {
                     itemType,
                 });
             });
-
-            // triangles:
-            // items.forEach((gameItem, coord) => {
-            //     const [x, y] = parseCoords(coord);
-            //     const offsetY = x % 2 ? size / 2 : 0;
-            //     const offsetX = y % 2 ? size / 2 : 0;
-            //     ctx.rect(x * size + offsetX, y * size + offsetY, size, size);
-            //     // ctx.rect(x * size, y * size + offsetY, size, size);
-            //     ctx.stroke();
-            // });
         }
-        // untrack(() => {
-        //     const { perfMeter } = config() || {};
         if (perfMeter) console.timeEnd('draw-hints');
-        // });
     });
 
     // todo: clicked mine
@@ -537,11 +468,65 @@ export const CanvasRender = () => {
         }
     });
 
+    // (overlay-with-points)
+    createEffect(() => {
+        const ctxOverlay = canvasOverlay?.getContext('2d');
+        if (ctxOverlay) {
+            const { x, y } = getCursorPoint();
+            const coord = formatCoords(x, y);
+            if (!coord) return;
+
+            const bros = getBroCoords({ coord, config: config() || undefined });
+
+            ctxOverlay.clearRect(0, 0, width, height);
+
+            const top = 50;
+            const left = 25;
+            const coords = [...bros, coord];
+
+            coords.forEach((coord) => {
+                const [x, y] = parseCoords(coord);
+                ctxOverlay.strokeRect(x * size, y * size, size, size);
+            });
+
+            ctxOverlay.fillStyle = 'white';
+            ctxOverlay.fillRect(
+                x * size + size * 2,
+                y * size - size,
+                top * 3,
+                left * 3,
+            );
+
+            const groupedCoords = coords
+                .reduce((acc, coord) => {
+                    const [x, y] = parseCoords(coord);
+                    if (!acc[y]) acc[y] = [];
+                    acc[y].push(coord);
+                    return acc;
+                }, [] as string[][])
+                .filter((a) => a)
+                .map((coords) => coords.sort());
+
+            groupedCoords.forEach((coords) => {
+                const text = coords.join('  ');
+                const [x, y] = parseCoords(coords[0]);
+                ctxOverlay.textBaseline = 'top';
+                ctxOverlay.textAlign = 'left';
+                ctxOverlay.font = `bold 12px sans-serif`;
+                ctxOverlay.fillStyle = 'black';
+
+                ctxOverlay.fillText(text, x * size + size * 3 + 2, y * size);
+            });
+        }
+    });
+
+    // (click-on-item)
     const mouseUpHandler = ({ button }: MouseEvent) => {
         const { x, y } = getCursorPoint();
         clickItem({ coord: shapeKey(x, y), button });
     };
 
+    // (mouse-down-on-item) todo: remove?
     const mouseDownHandler = (e: MouseEvent) => {
         const ctx = canvas.getContext('2d');
         if (ctx && e.button === MouseControls.Left) {
@@ -555,14 +540,24 @@ export const CanvasRender = () => {
     };
 
     return (
-        <canvas
-            ref={canvas}
-            class="game-field"
-            width={width}
-            height={height}
-            // onKeyUp={keyUpHandler}
-            onMouseUp={mouseUpHandler}
-            onMouseDown={mouseDownHandler}
-        />
+        <>
+            <canvas
+                ref={canvas}
+                class="game-field"
+                width={width}
+                height={height}
+                // onKeyUp={keyUpHandler}
+                onMouseUp={mouseUpHandler}
+                onMouseDown={mouseDownHandler}
+            />
+            <Show when={overlayMode} keyed>
+                <canvas
+                    ref={canvasOverlay}
+                    class="game-overlay"
+                    width={width}
+                    height={height}
+                />
+            </Show>
+        </>
     );
 };

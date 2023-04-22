@@ -1,9 +1,13 @@
-// import { Game } from 'widgets/game';
-import './app.css';
+import { HopeProvider } from '@hope-ui/solid';
 import { Game } from 'widgets/game';
+import './app.css';
 
 function App() {
-    return <Game />;
+    return (
+        <HopeProvider config={{ initialColorMode: 'dark' }}>
+            <Game />
+        </HopeProvider>
+    );
 }
 
 export default App;

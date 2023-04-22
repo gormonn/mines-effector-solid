@@ -2,7 +2,7 @@ import { condition, reset, spread } from 'patronum';
 import { combine, createEvent, createStore, sample } from 'effector';
 import { gameModel } from 'entities/game';
 import { getFlaggedMines } from 'entities/game/lib/get-flagged-mines';
-import { isEmptyItem, isNumber } from 'shared/lib';
+import { isEmptyItem, isMine, isNumber } from 'shared/lib';
 import type { Coord, CoordsSet } from 'shared/types';
 import { MouseControls } from 'shared/types';
 import { getNumbers } from './lib/get-numbers';
@@ -18,6 +18,8 @@ const clickRMB = createEvent<ClickItemProps>();
 // todo: add count of numbers to get win (if all numbers is open)
 const $openedItems = createStore<CoordsSet>(emptyCoordSet);
 const $flaggedItems = createStore<CoordsSet>(emptyCoordSet);
+const $openedNumbersCount = createStore<number>(0);
+const devOpenAll = createEvent();
 
 const hintNumber = createEvent();
 const hintMine = createEvent();
@@ -33,24 +35,38 @@ const $isTouched = createStore(false); // todo: нахера?
 const $isWin = createStore(false);
 // todo: is win
 
-const $maxOpenedItems = createStore<number>(0);
-
-// (calc-win-condition)
+// (dev-open-all)
 sample({
-    source: gameModel.$indexes,
-    fn: (indexes) =>
-        indexes?.reduce((acc, set) => {
-            acc += set.size;
-            return acc;
-        }, 0) || 0,
-    target: $maxOpenedItems,
+    clock: devOpenAll,
+    source: gameModel.$gameItems,
+    filter: Boolean,
+    fn: (gameItems) =>
+        new Set(
+            [...gameItems]
+                .filter(([, item]) => !isMine(item))
+                .map(([key]) => key),
+        ),
+    target: $openedItems,
 });
 
-// (win-game)
+// too-slow (current-opened-numbers-count)
 sample({
-    source: { maxOpenedItems: $maxOpenedItems, openedItems: $openedItems },
-    fn: ({ maxOpenedItems, openedItems }) =>
-        openedItems.size === maxOpenedItems,
+    source: { openedItems: $openedItems, gameItems: gameModel.$gameItems },
+    fn: ({ openedItems, gameItems }) =>
+        new Set(getNumbers(openedItems, gameItems)).size,
+    target: $openedNumbersCount,
+});
+
+// (win-game-condition)
+sample({
+    source: {
+        numbersCount: gameModel.$numbersCount,
+        openedNumbersCount: $openedNumbersCount,
+    },
+    filter: ({ numbersCount, openedNumbersCount }) =>
+        numbersCount > 0 && openedNumbersCount > 0,
+    fn: ({ numbersCount, openedNumbersCount }) =>
+        openedNumbersCount === numbersCount,
     target: $isWin,
 });
 
@@ -96,13 +112,22 @@ sample({
 });
 
 // (game-over)
+// sample({
+//     source: {
+//         clickedMine: $clickedMine,
+//         config: gameModel.$config,
+//     },
+//     filter: ({ config, clickedMine }) =>
+//         Boolean(config?.infinityMode === false && clickedMine.length > 0),
+//     fn: () => true,
+//     target: $isGameOver,
+// });
 sample({
     source: {
         clickedMine: $clickedMine,
         config: gameModel.$config,
     },
-    filter: ({ config, clickedMine }) =>
-        Boolean(config?.infinityMode === false && clickedMine.length > 0),
+    filter: ({ config, clickedMine }) => clickedMine.length > 0,
     fn: () => true,
     target: $isGameOver,
 });
@@ -118,6 +143,7 @@ reset({
         $hintedNumbers,
         $hintedMines,
         $hintedEmpty,
+        $isWin,
     ],
 });
 
@@ -269,5 +295,6 @@ export const model = {
     $hintedMines,
     $hintedEmpty,
     $isWin,
-    $maxOpenedItems,
+    devOpenAll,
+    $openedNumbersCount,
 };

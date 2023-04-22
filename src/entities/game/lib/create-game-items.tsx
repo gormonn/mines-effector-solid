@@ -1,4 +1,5 @@
 import { getForcedBros } from 'entities/game/lib/forced-bros';
+import { getNumbersCount } from 'entities/game/lib/get-numbers-count';
 import {
     checkCoordInIndex,
     formatCoords,
@@ -101,7 +102,10 @@ export const createGameItems = (config: GameConfig) => {
         });
     }
 
+    // todo: check it
     // todo: bug: indexes содержит значения с отрицательными координатами
 
-    return { gameItems, mines, indexes };
+    const numbersCount = getNumbersCount(gameItems);
+
+    return { gameItems, mines, indexes, numbersCount };
 };

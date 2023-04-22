@@ -28,8 +28,7 @@ type GameItemProps = {
 };
 
 export const GameItemCell = (props: GameItemProps) => {
-    const [openItem, clickItem, openedItems, clickedMine, debugMode] = useUnit([
-        model.openItem,
+    const [clickItem, openedItems, clickedMine, debugMode] = useUnit([
         model.clickItem,
         model.$openedItems,
         model.$clickedMine,
@@ -58,9 +57,7 @@ export const GameItemCell = (props: GameItemProps) => {
         <div
             data-tip={coord}
             classList={{ item: true, opened: opened() }}
-            // onClick={() => openItem(coord)}
-            onClick={() => clickItem(coord)}
-            // onClick={() => model.clickItem(coord)}
+            onMouseUp={({ button }) => clickItem({ coord, button })}
         >
             {opened() ? children : debugMode() ? children : null}
         </div>

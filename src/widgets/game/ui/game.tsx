@@ -1,11 +1,13 @@
 import { createEffect, Match, onCleanup, onMount, Switch } from 'solid-js';
 import { useGate, useUnit } from 'effector-solid/scope';
+import { LoserModal } from 'widgets/game/ui/loser-modal';
+import { WinnerModal } from 'widgets/game/ui/winner-modal';
 import { savePresetModel } from 'features/devtools/save-preset';
 import { GameItems, openItemsModel } from 'features/open-items';
 import { gameModel, random } from 'entities/game';
 import { CanvasRender, DomRender } from 'entities/render';
 import { GameConfig, RenderType, StoreVersion } from 'shared/types';
-import './container.scss';
+import 'widgets/game/container.scss';
 
 // todo: до 81 генерится +- с одинаковой скоростью 60-80ms
 //  после 81 - занимает в 10 раз больше времени 152+ ms 83=300ms
@@ -23,7 +25,7 @@ import './container.scss';
 //     - не годится для Coop или PvP с одинаковыми полями
 //  - для Coop это должно быть на уровне хоста/сервера
 //  - Ladder? чисто на сервере или на клиенте? что сложнее подделать и перехватить?
-const height = 33;
+const height = 10;
 const width = 33;
 
 // const config: GameConfig = { ...diagonal };
@@ -32,12 +34,14 @@ const width = 33;
 // const config: GameConfig = { ...vertHoriz };
 const gameConfig: GameConfig = {
     ...random(height),
-    debugMode: true,
     indexing: true,
     render: RenderType.canvas,
     storeVersion: StoreVersion.v1,
-    infinityMode: true,
-    perfMeter: true,
+    // debugMode: true,
+    // infinityMode: true,
+    // perfMeter: true,
+
+    // overlayMode: true,
     // forcedMinesBros: ['2-2', '2-5'],
     // forcedEmptyBros: ['2-2', '2-5'],
     // forcedOpen: '2-2',
@@ -52,66 +56,22 @@ export const Game = () => {
     useGate(gameModel.newGame, gameConfig);
 
     const [
-        isWin,
-        maxOpenedItems,
-        openedItems,
+        devOpenAll,
         hintNumber,
         hintedNumbers,
         hintMine,
         saveGamePreset,
         config,
         startTime,
-        shift,
-        setShiftX,
-        setShiftY,
     ] = useUnit([
-        openItemsModel.$isWin,
-        openItemsModel.$maxOpenedItems,
-        openItemsModel.$openedItems,
+        openItemsModel.devOpenAll,
         openItemsModel.hintNumber,
         openItemsModel.$hintedNumbers,
         openItemsModel.hintMine,
         savePresetModel.saveGamePreset,
         gameModel.$config,
         gameModel.$startTime,
-        gameModel.$shift,
-        gameModel.setShiftX,
-        gameModel.setShiftY,
     ]);
-
-    createEffect(() => {
-        console.log(isWin(), 'isWin()');
-        console.log(maxOpenedItems(), 'maxOpenedItems()');
-        console.log(openedItems(), 'openedItems()');
-    });
-
-    // createEffect(() => {
-    //     console.log(shift(), 'shift');
-    // });
-
-    const keyPressHandler = (e: KeyboardEvent) => {
-        switch (e.key) {
-            case 'ArrowUp':
-                setShiftY(-1);
-                break;
-            case 'ArrowDown':
-                setShiftY(1);
-                break;
-            case 'ArrowLeft':
-                setShiftX(-1);
-                break;
-            case 'ArrowRight':
-                setShiftX(1);
-                break;
-        }
-    };
-
-    onMount(() => {
-        document.body.addEventListener('keydown', keyPressHandler);
-        onCleanup(() => {
-            document.body.removeEventListener('keydown', keyPressHandler);
-        });
-    });
 
     const contextMenuDisable = (e: MouseEvent) => {
         e.preventDefault();
@@ -119,9 +79,10 @@ export const Game = () => {
 
     return (
         <>
-            <button onClick={saveGamePreset}>Сохранить пресет игры</button>
-            <button onClick={hintNumber}>Hint Number</button>
-            <button onClick={hintMine}>Hint Mine</button>
+            {/*<button onClick={saveGamePreset}>Сохранить пресет игры</button>*/}
+            {/*<button onClick={hintNumber}>Hint Number</button>*/}
+            {/*<button onClick={hintMine}>Hint Mine</button>*/}
+            {/*<button onClick={devOpenAll}>open all</button>*/}
             <div class="container" onContextMenu={contextMenuDisable}>
                 <Switch fallback={<>Loading...</>}>
                     <Match keyed when={config()?.render === RenderType.canvas}>
@@ -140,6 +101,8 @@ export const Game = () => {
                     </Match>
                 </Switch>
             </div>
+            <WinnerModal />
+            <LoserModal />
         </>
     );
 };
