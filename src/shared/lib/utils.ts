@@ -43,8 +43,10 @@ export function formatCoords(
     return result;
 }
 
-export const parseCoords = (key: string): MinesCoord =>
-    key.split('-').map((e, i) => Number(e)) as MinesCoord;
+export const parseCoords = (key: string): MinesCoord => {
+    // console.log(key, 'key');
+    return key.split('-').map((e) => Number(e)) as MinesCoord;
+};
 
 // export const parseCoords = (key: string, offset = defaultOffset): MinesCoord =>
 //     key.split('-').map((e, i) => {

@@ -473,11 +473,9 @@ export const CanvasRender = () => {
         }
     });
 
-    const mouseUpHandler = (e: MouseEvent) => {
-        if (e.button === MouseControls.Left) {
-            const { x, y } = getCursorPoint();
-            clickItem(shapeKey(x, y));
-        }
+    const mouseUpHandler = ({ button }: MouseEvent) => {
+        const { x, y } = getCursorPoint();
+        clickItem({ coord: shapeKey(x, y), button });
     };
 
     const mouseDownHandler = (e: MouseEvent) => {

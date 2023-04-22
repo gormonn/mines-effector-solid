@@ -38,5 +38,7 @@ export const getBroCoords = ({
     } else if (!diagonal) {
         return result.filter((v) => v) as string[];
     }
-    return result as string[];
+    // todo: должен ли он вообще возвращать записи с null?
+    // return result as string[];
+    return result.filter((v) => v) as string[];
 };

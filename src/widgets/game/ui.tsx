@@ -1,7 +1,7 @@
 import { createEffect, Match, onCleanup, onMount, Switch } from 'solid-js';
 import { useGate, useUnit } from 'effector-solid/scope';
 import { savePresetModel } from 'features/devtools/save-preset';
-import { GameItems } from 'features/open-items';
+import { GameItems, openItemsModel } from 'features/open-items';
 import { gameModel, random } from 'entities/game';
 import { CanvasRender, DomRender } from 'entities/render';
 import { GameConfig, RenderType, StoreVersion } from 'shared/types';
@@ -51,15 +51,25 @@ export const Game = () => {
     // useGate(gameModel.newGame, config);
     useGate(gameModel.newGame, gameConfig);
 
-    const [saveGamePreset, config, startTime, shift, setShiftX, setShiftY] =
-        useUnit([
-            savePresetModel.saveGamePreset,
-            gameModel.$config,
-            gameModel.$startTime,
-            gameModel.$shift,
-            gameModel.setShiftX,
-            gameModel.setShiftY,
-        ]);
+    const [
+        hintNumber,
+        hintMine,
+        saveGamePreset,
+        config,
+        startTime,
+        shift,
+        setShiftX,
+        setShiftY,
+    ] = useUnit([
+        openItemsModel.hintNumber,
+        openItemsModel.hintMine,
+        savePresetModel.saveGamePreset,
+        gameModel.$config,
+        gameModel.$startTime,
+        gameModel.$shift,
+        gameModel.setShiftX,
+        gameModel.setShiftY,
+    ]);
 
     // createEffect(() => {
     //     console.log(startTime(), 'startTime()');
@@ -99,9 +109,10 @@ export const Game = () => {
 
     return (
         <>
-            <button onClick={() => saveGamePreset()}>
-                Сохранить пресет игры
-            </button>
+            {/*<button onClick={() => saveGamePreset()}>*/}
+            <button onClick={saveGamePreset}>Сохранить пресет игры</button>
+            <button onClick={hintNumber}>Hint Number</button>
+            <button onClick={hintMine}>Hint Mine</button>
             <div class="container" onContextMenu={contextMenuDisable}>
                 <Switch fallback={<>Loading...</>}>
                     <Match keyed when={config()?.render === RenderType.canvas}>
