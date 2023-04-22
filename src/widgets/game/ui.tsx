@@ -37,7 +37,7 @@ const gameConfig: GameConfig = {
     render: RenderType.canvas,
     storeVersion: StoreVersion.v1,
     infinityMode: true,
-    // perfMeter: true,
+    perfMeter: true,
     // forcedMinesBros: ['2-2', '2-5'],
     // forcedEmptyBros: ['2-2', '2-5'],
     // forcedOpen: '2-2',
@@ -52,7 +52,11 @@ export const Game = () => {
     useGate(gameModel.newGame, gameConfig);
 
     const [
+        isWin,
+        maxOpenedItems,
+        openedItems,
         hintNumber,
+        hintedNumbers,
         hintMine,
         saveGamePreset,
         config,
@@ -61,7 +65,11 @@ export const Game = () => {
         setShiftX,
         setShiftY,
     ] = useUnit([
+        openItemsModel.$isWin,
+        openItemsModel.$maxOpenedItems,
+        openItemsModel.$openedItems,
         openItemsModel.hintNumber,
+        openItemsModel.$hintedNumbers,
         openItemsModel.hintMine,
         savePresetModel.saveGamePreset,
         gameModel.$config,
@@ -71,9 +79,11 @@ export const Game = () => {
         gameModel.setShiftY,
     ]);
 
-    // createEffect(() => {
-    //     console.log(startTime(), 'startTime()');
-    // });
+    createEffect(() => {
+        console.log(isWin(), 'isWin()');
+        console.log(maxOpenedItems(), 'maxOpenedItems()');
+        console.log(openedItems(), 'openedItems()');
+    });
 
     // createEffect(() => {
     //     console.log(shift(), 'shift');
@@ -109,7 +119,6 @@ export const Game = () => {
 
     return (
         <>
-            {/*<button onClick={() => saveGamePreset()}>*/}
             <button onClick={saveGamePreset}>Сохранить пресет игры</button>
             <button onClick={hintNumber}>Hint Number</button>
             <button onClick={hintMine}>Hint Mine</button>

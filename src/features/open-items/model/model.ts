@@ -1,14 +1,14 @@
 import { condition, reset, spread } from 'patronum';
-import { createEvent, createStore, sample } from 'effector';
-import { gameModel, getEmptyBroCoordsV1 } from 'entities/game';
+import { combine, createEvent, createStore, sample } from 'effector';
+import { gameModel } from 'entities/game';
 import { getFlaggedMines } from 'entities/game/lib/get-flagged-mines';
 import { isEmptyItem, isNumber } from 'shared/lib';
 import type { Coord, CoordsSet } from 'shared/types';
 import { MouseControls } from 'shared/types';
+import { getNumbers } from './lib/get-numbers';
 
 type ClickItemProps = { coord: Coord; button: MouseControls };
 const emptyCoordSet: CoordsSet = new Set();
-const openItem = createEvent<Coord>();
 const clickItem = createEvent<ClickItemProps>();
 const clickLMB = createEvent<ClickItemProps>();
 const clickRMB = createEvent<ClickItemProps>();
@@ -19,26 +19,66 @@ const clickRMB = createEvent<ClickItemProps>();
 const $openedItems = createStore<CoordsSet>(emptyCoordSet);
 const $flaggedItems = createStore<CoordsSet>(emptyCoordSet);
 
-// todo: hint number
 const hintNumber = createEvent();
-// todo: hint mine
 const hintMine = createEvent();
+const hintEmpty = createEvent();
 const $hintedNumbers = createStore<CoordsSet>(emptyCoordSet);
 const $hintedMines = createStore<CoordsSet>(emptyCoordSet);
+const $hintedEmpty = createStore<CoordsSet>(emptyCoordSet);
 
 const $clickedMine = createStore<string>('');
 const $isGameOver = createStore(false);
-const $isTouched = createStore(false);
+const $isTouched = createStore(false); // todo: нахера?
+
+const $isWin = createStore(false);
 // todo: is win
 
+const $maxOpenedItems = createStore<number>(0);
+
+// (calc-win-condition)
+sample({
+    source: gameModel.$indexes,
+    fn: (indexes) =>
+        indexes?.reduce((acc, set) => {
+            acc += set.size;
+            return acc;
+        }, 0) || 0,
+    target: $maxOpenedItems,
+});
+
+// (win-game)
+sample({
+    source: { maxOpenedItems: $maxOpenedItems, openedItems: $openedItems },
+    fn: ({ maxOpenedItems, openedItems }) =>
+        openedItems.size === maxOpenedItems,
+    target: $isWin,
+});
+
+// (show-hint-numbers)
 sample({
     clock: hintNumber,
-    fn: () => {
-        return new Set([]);
+    source: { openedItems: $openedItems, gameItems: gameModel.$gameItems },
+    filter: ({ openedItems }) => openedItems.size > 0,
+    fn: ({ openedItems, gameItems }) => {
+        const numbers = getNumbers(openedItems, gameItems);
+        return new Set(numbers);
     },
     target: $hintedNumbers,
 });
 
+// (show-hint-empty)
+sample({
+    clock: hintEmpty,
+    source: { openedItems: $openedItems, gameItems: gameModel.$gameItems },
+    filter: ({ openedItems }) => openedItems.size > 0,
+    fn: ({ openedItems, gameItems }) => {
+        const numbers = getNumbers(openedItems, gameItems);
+        return new Set(numbers);
+    },
+    target: $hintedEmpty,
+});
+
+// (call-next-endless-game)
 sample({
     source: {
         clickedMine: $clickedMine,
@@ -55,6 +95,7 @@ sample({
     target: gameModel.genNewGame,
 });
 
+// (game-over)
 sample({
     source: {
         clickedMine: $clickedMine,
@@ -66,11 +107,21 @@ sample({
     target: $isGameOver,
 });
 
+// (restart-game, next-endless-game)
 reset({
     clock: [gameModel.newGame.close, gameModel.$config],
-    target: [$openedItems, $isGameOver, $clickedMine],
+    target: [
+        $flaggedItems,
+        $openedItems,
+        $isGameOver,
+        $clickedMine,
+        $hintedNumbers,
+        $hintedMines,
+        $hintedEmpty,
+    ],
 });
-// forcedOpen
+
+// (programmatically-open-handler)
 sample({
     source: {
         config: gameModel.$config,
@@ -94,11 +145,13 @@ sample({
     target: $openedItems,
 });
 
+// (click-on-mine)
 sample({
     source: {
         mineItems: gameModel.$mineItems,
         openedItems: $openedItems,
     },
+    // some opened, and game with mines
     filter: ({ mineItems, openedItems }) =>
         Boolean(mineItems.size > 0 && openedItems.size > 0),
     fn: ({ mineItems, openedItems }) =>
@@ -108,23 +161,7 @@ sample({
     target: $clickedMine,
 });
 
-sample({
-    clock: openItem,
-    source: {
-        openedItems: $openedItems,
-        gameItems: gameModel.$gameItems,
-        config: gameModel.newGame.state,
-    },
-    // todo: add filter by empty or number
-    // is not opened
-    filter: ({ openedItems }, coord) => !openedItems.has(coord),
-    fn: ({ openedItems, gameItems, config }, coord) => {
-        const broSet = getEmptyBroCoordsV1({ coord, gameItems, config });
-        return new Set([...openedItems, ...broSet, coord]);
-    },
-    target: $openedItems,
-});
-
+// (click-on-item)
 condition({
     source: clickItem,
     if: ({ button }) => button === MouseControls.Left,
@@ -132,25 +169,11 @@ condition({
     else: clickRMB,
 });
 
-// const logFx = createEffect((props: { from: string } & ClickItemProps) => {
-//     console.log(props, 'props');
-// });
-//
-// sample({
-//     clock: clickLMB,
-//     fn: (props) => ({ ...props, from: 'LMB' }),
-//     target: logFx,
-// });
-// sample({
-//     clock: clickRMB,
-//     fn: (props) => ({ ...props, from: 'RMB' }),
-//     target: logFx,
-// });
-
+// (flag-item) right mouse click on not opened item
 sample({
     clock: clickRMB,
     source: { flaggedItems: $flaggedItems, openedItems: $openedItems },
-    // is not opened
+    // isNotOpened
     filter: ({ openedItems }, { coord }) => !openedItems.has(coord),
     fn: ({ flaggedItems }, { coord }) => {
         const newSet = new Set(flaggedItems);
@@ -164,6 +187,7 @@ sample({
     target: $flaggedItems,
 });
 
+// (open-item) left mouse click on not opened item
 sample({
     clock: clickLMB,
     source: {
@@ -171,7 +195,7 @@ sample({
         gameItems: gameModel.$gameItems,
         indexes: gameModel.$indexes,
     },
-    // is not opened
+    // isNotOpened
     filter: ({ openedItems }, { coord }) => !openedItems.has(coord),
     fn: ({ gameItems, openedItems, indexes }, { coord }) => {
         // todo#212312: move to lib
@@ -184,6 +208,7 @@ sample({
     target: $openedItems,
 });
 
+// (open-item-on-click-number)
 sample({
     clock: clickLMB,
     source: {
@@ -223,14 +248,14 @@ sample({
     }),
 });
 
+// (set-touched)
 sample({
-    clock: [openItem, clickItem],
+    clock: [clickItem],
     fn: () => true,
     target: $isTouched,
 });
 
 export const model = {
-    openItem,
     clickItem,
     $openedItems,
     $flaggedItems,
@@ -239,6 +264,10 @@ export const model = {
     $isTouched,
     hintNumber,
     hintMine,
+    hintEmpty,
     $hintedNumbers,
     $hintedMines,
+    $hintedEmpty,
+    $isWin,
+    $maxOpenedItems,
 };

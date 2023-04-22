@@ -1,6 +1,6 @@
 import { getBroCoords } from 'entities/game/lib/get-bro-coords';
 import { isEmptyItem, isMine } from 'shared/lib';
-import { Coord, CoordsSet, GameConfig, GameItems, Indexes } from 'shared/types';
+import { CoordsSet, GameConfig, GameItems, Indexes } from 'shared/types';
 
 type Props = {
     coord: string;
@@ -50,18 +50,3 @@ export const getFlaggedMines = ({
         empty,
     };
 };
-
-// export const getFlaggedEmpty = ({
-//     mines,
-//     openedItems,
-// }: Props & { mines: Coord[] }) => {
-//     // const broSet = getBroCoords({ coord, config });
-//     //
-//     // const mines = broSet.filter((coord) => {
-//     //     const item = gameItems.get(coord);
-//     //     return isMine(item);
-//     // });
-//     const notOpenedBros = broSet.filter((coord) => !openedItems.has(coord));
-//
-//     return mines.length ? notOpenedBros : [];
-// };

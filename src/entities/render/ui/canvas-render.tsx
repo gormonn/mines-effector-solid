@@ -14,7 +14,7 @@ import { openItemsModel } from 'features/open-items';
 import { gameModel } from 'entities/game';
 import { isEmptyItem, isMine, isNumber, parseCoords } from 'shared/lib';
 import './styles.css';
-import { GameItemEnum, MouseControls } from 'shared/types';
+import { GameItemEnum, MouseControls, NumberItems } from 'shared/types';
 
 // todo: create theming
 const styles = {
@@ -115,14 +115,10 @@ const setFill = (
 ) => {
     ctx.save();
     ctx.clip(shape);
-    // if (style?.background) {
     ctx.lineWidth *= 1;
     ctx.fillStyle = style.background;
-    // }
     ctx.fill(shape);
-    // if (style?.borderColor) {
     ctx.strokeStyle = style.borderColor;
-    // }
     ctx.stroke(shape);
     ctx.restore();
 };
@@ -152,7 +148,7 @@ type CreateShapeProps = {
     itemType?: GameItemEnum;
     isOpen?: boolean;
     isFlagged?: boolean;
-    isDebugMode?: boolean;
+    debugMode?: boolean;
 };
 
 // todo: wtf, нахера мне дублировать состояние???
@@ -164,12 +160,12 @@ const createShape = ({
     itemType,
     isOpen = false,
     isFlagged = false,
-    isDebugMode = false,
+    debugMode = false,
 }: CreateShapeProps) => {
     const shape = new Path2D();
     shape.rect(x * size, y * size, size, size);
     const fill = (() => {
-        if (isDebugMode) {
+        if (debugMode) {
             return styles.item.hoverOff;
         } else if (isOpen) {
             return styles.item.opened;
@@ -194,6 +190,38 @@ const createShape = ({
     shapesMap.set(shapeKey(x, y), { shape, isOpen: true, itemType });
 };
 
+type CreateHintProps = {
+    ctx: CanvasRenderingContext2D;
+    x: number;
+    y: number;
+    itemType?: GameItemEnum;
+};
+const createHint = ({ ctx, x, y, itemType }: CreateHintProps) => {
+    const shape = new Path2D();
+    shape.rect(x * size, y * size, size, size);
+
+    ctx.strokeStyle = (() => {
+        switch (itemType) {
+            default:
+            case GameItemEnum.empty:
+                return 'white';
+            case GameItemEnum.mine:
+                return 'red';
+            case GameItemEnum.n1:
+            case GameItemEnum.n2:
+            case GameItemEnum.n3:
+            case GameItemEnum.n4:
+            case GameItemEnum.n5:
+            case GameItemEnum.n6:
+            case GameItemEnum.n7:
+            case GameItemEnum.n8:
+            case GameItemEnum.n9:
+                return 'yellow';
+        }
+    })();
+    ctx.stroke(shape);
+};
+
 // todo: move to widgets
 export const CanvasRender = () => {
     let canvas: HTMLCanvasElement;
@@ -202,30 +230,26 @@ export const CanvasRender = () => {
     const [
         config,
         gameItems,
-        debugMode,
+        // debugMode,
         clickItem,
         openedItems,
         flaggedItems,
         clickedMine,
+        hintedNumbers,
     ] = useUnit([
         gameModel.$config,
         gameModel.$gameItems,
-        gameModel.$debugMode,
+        // gameModel.$debugMode,
         openItemsModel.clickItem,
         openItemsModel.$openedItems,
         openItemsModel.$flaggedItems,
         openItemsModel.$clickedMine,
+        openItemsModel.$hintedNumbers,
     ]);
 
     const width = (config()?.width || 1) * size;
     const height = (config()?.height || 1) * size;
-    // createEffect(() => {
-    //     console.log(gameItems(), 'gameItems');
-    // });
-
-    // createEffect(() => {
-    //     console.log(openedItems(), 'openedItems');
-    // });
+    const { debugMode, perfMeter } = config() || {};
 
     const [pointerX, setPointerX] = createSignal(0);
     const [pointerY, setPointerY] = createSignal(0);
@@ -318,7 +342,7 @@ export const CanvasRender = () => {
                     y,
                     shapesMap,
                     itemType,
-                    isDebugMode: debugMode(),
+                    debugMode,
                 });
             });
 
@@ -373,10 +397,10 @@ export const CanvasRender = () => {
     //  если убрать untrack - то рендер не происходит
     // перерисовка при открытии полей
     createEffect(() => {
-        untrack(() => {
-            const { perfMeter } = config() || {};
-            if (perfMeter) console.time('call draw effect');
-        });
+        // untrack(() => {
+        // const { perfMeter } = config() || {};
+        if (perfMeter) console.time('draw-opened-items');
+        // });
 
         const ctx = canvas.getContext('2d');
         if (ctx) {
@@ -408,18 +432,18 @@ export const CanvasRender = () => {
             //     ctx.stroke();
             // });
         }
-        untrack(() => {
-            const { perfMeter } = config() || {};
-            if (perfMeter) console.timeEnd('call draw effect');
-        });
+        // untrack(() => {
+        //     const { perfMeter } = config() || {};
+        if (perfMeter) console.timeEnd('draw-opened-items');
+        // });
     });
 
     // перерисовка при проставлении флажков
     createEffect(() => {
-        untrack(() => {
-            const { perfMeter } = config() || {};
-            if (perfMeter) console.time('call draw effect');
-        });
+        // untrack(() => {
+        //     const { perfMeter } = config() || {};
+        if (perfMeter) console.time('draw-flags');
+        // });
 
         const ctx = canvas.getContext('2d');
         if (ctx) {
@@ -451,10 +475,50 @@ export const CanvasRender = () => {
             //     ctx.stroke();
             // });
         }
-        untrack(() => {
-            const { perfMeter } = config() || {};
-            if (perfMeter) console.timeEnd('call draw effect');
-        });
+        // untrack(() => {
+        //     const { perfMeter } = config() || {};
+        if (perfMeter) console.timeEnd('draw-flags');
+        // });
+    });
+
+    // перерисовка при получении подсказок
+    createEffect(() => {
+        // untrack(() => {
+        //     const { perfMeter } = config() || {};
+        if (perfMeter) console.time('draw-hints');
+        // });
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            const hints = hintedNumbers();
+            const items = gameItems();
+
+            // rects:
+            hints.forEach((gameItem, coord) => {
+                const [x, y] = parseCoords(coord);
+                const itemType = items.get(coord);
+                createHint({
+                    ctx,
+                    x,
+                    y,
+                    itemType,
+                });
+            });
+
+            // triangles:
+            // items.forEach((gameItem, coord) => {
+            //     const [x, y] = parseCoords(coord);
+            //     const offsetY = x % 2 ? size / 2 : 0;
+            //     const offsetX = y % 2 ? size / 2 : 0;
+            //     ctx.rect(x * size + offsetX, y * size + offsetY, size, size);
+            //     // ctx.rect(x * size, y * size + offsetY, size, size);
+            //     ctx.stroke();
+            // });
+        }
+        // untrack(() => {
+        //     const { perfMeter } = config() || {};
+        if (perfMeter) console.timeEnd('draw-hints');
+        // });
     });
 
     // todo: clicked mine
