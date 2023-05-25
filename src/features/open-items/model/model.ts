@@ -5,7 +5,7 @@ import { getFlaggedMines } from 'entities/game/lib/get-flagged-mines';
 import { isEmptyItem, isMine, isNumber } from 'shared/lib';
 import type { Coord, CoordsSet } from 'shared/types';
 import { MouseControls } from 'shared/types';
-import { getNumbers } from './lib/get-numbers';
+import { getNumbers, getNumbers2 } from './lib/get-numbers';
 
 type ClickItemProps = { coord: Coord; button: MouseControls };
 const emptyCoordSet: CoordsSet = new Set();
@@ -52,8 +52,11 @@ sample({
 // too-slow (current-opened-numbers-count)
 sample({
     source: { openedItems: $openedItems, gameItems: gameModel.$gameItems },
-    fn: ({ openedItems, gameItems }) =>
-        new Set(getNumbers(openedItems, gameItems)).size,
+    fn: ({ openedItems, gameItems }) => {
+        const set = new Set(getNumbers2(openedItems, gameItems));
+        console.log(set, 'set');
+        return set.size;
+    },
     target: $openedNumbersCount,
 });
 

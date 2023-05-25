@@ -1,0 +1,20 @@
+{
+  "plugins": [
+    [
+      "effector/babel-plugin",
+      {
+        "factories": [
+          "patronum",
+          "effector-forms"
+        ]
+      }
+    ]
+  ],
+  "env": {
+    "logger": {
+      "plugins": [
+        "effector-logger/babel-plugin"
+      ]
+    }
+  }
+}

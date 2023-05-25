@@ -14,8 +14,6 @@ export const isEmptyItem = (item?: GameItemEnum) => item == GameItemEnum.empty;
 export const isNumber = (item?: GameItemEnum) =>
     !isEmptyItem(item) && !isMine(item);
 
-const defaultOffset: Shift = { x: 0, y: 0 };
-// function overload (перегрузка функции)
 export function formatCoords(x: number, y: number): string;
 export function formatCoords(
     x: number,

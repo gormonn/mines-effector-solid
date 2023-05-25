@@ -1,13 +1,13 @@
 import { createEffect, Match, onCleanup, onMount, Switch } from 'solid-js';
 import { useGate, useUnit } from 'effector-solid/scope';
-import { LoserModal } from 'widgets/game/ui/loser-modal';
-import { WinnerModal } from 'widgets/game/ui/winner-modal';
+import { LoserModal } from 'pages/game/ui/loser-modal';
+import { WinnerModal } from 'pages/game/ui/winner-modal';
 import { savePresetModel } from 'features/devtools/save-preset';
 import { GameItems, openItemsModel } from 'features/open-items';
 import { gameModel, random } from 'entities/game';
-import { CanvasRender, DomRender } from 'entities/render';
+import { CanvasRender, DomRender } from 'widgets/render/canvas';
 import { GameConfig, RenderType, StoreVersion } from 'shared/types';
-import 'widgets/game/container.scss';
+import 'pages/gameontainer.scss';
 
 // todo: до 81 генерится +- с одинаковой скоростью 60-80ms
 //  после 81 - занимает в 10 раз больше времени 152+ ms 83=300ms
@@ -25,7 +25,7 @@ import 'widgets/game/container.scss';
 //     - не годится для Coop или PvP с одинаковыми полями
 //  - для Coop это должно быть на уровне хоста/сервера
 //  - Ladder? чисто на сервере или на клиенте? что сложнее подделать и перехватить?
-const height = 10;
+const height = 33;
 const width = 33;
 
 // const config: GameConfig = { ...diagonal };
@@ -85,6 +85,9 @@ export const Game = () => {
             {/*<button onClick={devOpenAll}>open all</button>*/}
             <div class="container" onContextMenu={contextMenuDisable}>
                 <Switch fallback={<>Loading...</>}>
+                    <Match keyed when={config()?.render === RenderType.three}>
+                        <CanvasRender />
+                    </Match>
                     <Match keyed when={config()?.render === RenderType.canvas}>
                         <CanvasRender />
                     </Match>

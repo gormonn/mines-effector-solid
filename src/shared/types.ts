@@ -34,6 +34,7 @@ export type MinesCoord = [number, number];
 export enum RenderType {
     dom,
     canvas,
+    three,
 }
 
 export enum StoreVersion {
